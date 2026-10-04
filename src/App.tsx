@@ -6,43 +6,8 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload } from 'lucide-react';
-
-const playZenChime = () => {
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-
-    const fundamental = 432;
-    const freqs = [fundamental, fundamental * 2.76, fundamental * 5.4, fundamental * 8.9];
-    const gains = [1, 0.6, 0.4, 0.1];
-
-    const masterGain = ctx.createGain();
-    masterGain.connect(ctx.destination);
-
-    masterGain.gain.setValueAtTime(0, ctx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
-    masterGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.0);
-
-    freqs.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const oscGain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      oscGain.gain.value = gains[i];
-
-      osc.connect(oscGain);
-      oscGain.connect(masterGain);
-
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 4.5);
-    });
-  } catch (e) {
-    // Ignore audio errors
-  }
-};
+import { Download, Upload, Play, Pause, RotateCcw, Plus, Minus } from 'lucide-react';
+import { playZenChime, initAudioContext } from './utils/audio';
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -51,16 +16,32 @@ function App() {
   const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
   const [showOfflineReady, setShowOfflineReady] = useState(false);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [initialTime, setInitialTime] = useState(25 * 60);
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
 
   const { tasks, addTask, deleteTask, restoreTask, toggleTaskCompletion, getTasksForDate, importTasks, editTask, reorderTasks, rescheduleTask } = useTasks();
 
-  useRegisterSW({
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
     onOfflineReady() {
       setShowOfflineReady(true);
       setTimeout(() => setShowOfflineReady(false), 3000);
     },
   });
+
+  React.useEffect(() => {
+    // Ensure AudioContext is resumed on user interaction
+    const handleInteraction = () => initAudioContext();
+    window.addEventListener('click', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -70,22 +51,43 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isZenMode && timeLeft > 0) {
+    let interval: NodeJS.Timeout | undefined;
+    if (isTimerRunning) {
       interval = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
             playZenChime();
+            setIsTimerRunning(false);
+            if (interval) clearInterval(interval);
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-    } else if (!isZenMode) {
-      setTimeLeft(25 * 60); // reset when leaving
     }
-    return () => clearInterval(interval);
-  }, [isZenMode, timeLeft]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning]);
+
+  // When entering Zen mode, auto-start if not running and has time left,
+  // but only if we are starting fresh? Actually, let's just let the user start it or auto-start when they press F.
+  // The user says "when 'F' is pressed again, it resumes exactly from where it left off."
+  React.useEffect(() => {
+    if (isZenMode && timeLeft === initialTime) {
+      setIsTimerRunning(true);
+    } else if (!isZenMode && isTimerRunning) {
+      // Keep it running in the background, or pause? "pause (or keep running in the background)"
+      // Let's keep it running.
+    }
+  }, [isZenMode]);
+
+  const handleTimerChange = (minutes: number) => {
+    const newTime = minutes * 60;
+    setTimeLeft(newTime);
+    setInitialTime(newTime);
+    setIsTimerRunning(false);
+  };
 
   const handleSelectDate = (date: Date) => {
     if (date > selectedDate) setSlideAnim('left');
@@ -352,8 +354,93 @@ function App() {
 
       {/* Zen Mode Pomodoro Timer */}
       {isZenMode && (
-        <div className="fixed top-6 right-6 md:top-8 md:right-8 text-pink-400 text-lg font-medium tracking-widest opacity-80 font-mono z-50 select-none pointer-events-none transition-all">
-          {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+        <div className="fixed top-6 right-6 md:top-8 md:right-8 z-50 flex flex-col items-end gap-2 group">
+          
+          <div className="flex items-center gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+              <button 
+                onClick={() => {
+                  setTimeLeft(prev => Math.max(0, prev - 5 * 60));
+                  setInitialTime(prev => Math.max(0, prev - 5 * 60));
+                }}
+                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                title="Subtract 5m"
+              >
+                <Minus size={14} />
+              </button>
+              <button 
+                onClick={() => {
+                  setTimeLeft(prev => prev + 5 * 60);
+                  setInitialTime(prev => prev + 5 * 60);
+                }}
+                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                title="Add 5m"
+              >
+                <Plus size={14} />
+              </button>
+              
+              <div className="w-px h-4 bg-pink-100 mx-1"></div>
+              
+              <button 
+                onClick={() => setIsTimerRunning(!isTimerRunning)}
+                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                title={isTimerRunning ? "Pause" : "Play"}
+              >
+                {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
+              </button>
+              <button 
+                onClick={() => {
+                  setTimeLeft(initialTime);
+                  setIsTimerRunning(false);
+                }}
+                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                title="Reset"
+              >
+                <RotateCcw size={14} />
+              </button>
+            </div>
+            
+            <div className="text-pink-400 text-lg font-medium tracking-widest font-mono select-none">
+              {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-y-2 group-hover:translate-y-0">
+            {[5, 10, 15, 20, 30].map(mins => (
+              <button
+                key={mins}
+                onClick={() => handleTimerChange(mins)}
+                className="px-2 py-1 text-xs font-medium text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+              >
+                {mins}m
+              </button>
+            ))}
+          </div>
+
+        </div>
+      )}
+
+      {/* PWA Update Toast */}
+      {needRefresh && (
+        <div
+          aria-live="polite"
+          className="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 bg-white border border-pink-100 p-4 rounded-2xl shadow-xl flex flex-col items-center gap-3 animate-slide-up-fade z-[100] min-w-[280px]"
+        >
+          <span className="font-semibold text-gray-800 text-sm">New version available 🌸</span>
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={() => updateServiceWorker(true)}
+              className="flex-1 bg-pink-100 hover:bg-pink-200 text-pink-600 font-medium py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 text-sm"
+            >
+              Update
+            </button>
+            <button
+              onClick={() => setNeedRefresh(false)}
+              className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-500 font-medium py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 text-sm"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
 

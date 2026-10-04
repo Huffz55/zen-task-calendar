@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import type { DailyTask, RecurrenceType } from '../types';
 import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { playSoftPop } from '../utils/audio';
 
 interface DailyTaskListProps {
   selectedDate: Date;
@@ -15,35 +16,6 @@ interface DailyTaskListProps {
   isZenMode?: boolean;
   onToggleZenMode?: () => void;
 }
-
-const playSoftPop = () => {
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    osc.type = 'sine';
-    
-    // Organic Audio Variation (random between 580Hz and 620Hz)
-    const randomFreq = 580 + Math.random() * 40;
-    osc.frequency.setValueAtTime(randomFreq, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
-
-    gainNode.gain.setValueAtTime(0, ctx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.15);
-  } catch (e) {
-    // Ignore if audio fails or is blocked
-  }
-};
 
 export function DailyTaskList({ 
   selectedDate, 
@@ -72,22 +44,6 @@ export function DailyTaskList({
   const completedTasks = tasks.filter(t => t.isCompleted).length;
   const progressPercent = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
   const isPerfectDay = tasks.length > 0 && completedTasks === tasks.length;
-  
-  const [prevPerfect, setPrevPerfect] = useState(false);
-
-  useEffect(() => {
-    if (isPerfectDay && !prevPerfect) {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors: ['#fdf2f8', '#fbcfe8', '#ffffff'],
-        disableForReducedMotion: true,
-        zIndex: 100
-      });
-    }
-    setPrevPerfect(isPerfectDay);
-  }, [isPerfectDay, prevPerfect]);
 
   // Global 'N' Hotkey for Add Task
   useEffect(() => {
@@ -129,6 +85,18 @@ export function DailyTaskList({
     if (!isCompleted) {
       playSoftPop();
       if (navigator.vibrate) navigator.vibrate(10);
+
+      const isLastPending = tasks.filter(t => !t.isCompleted).length === 1;
+      if (isLastPending) {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#fdf2f8', '#fbcfe8', '#ffffff'],
+          disableForReducedMotion: false,
+          zIndex: 100
+        });
+      }
     }
     onToggleTask(taskId, dateString);
   };
