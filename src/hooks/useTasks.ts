@@ -120,6 +120,15 @@ export function useTasks() {
     setTasks(prev => [...prev, task]);
   }, []);
 
+  const rescheduleTask = useCallback((taskId: string, newDateStr: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, date: newDateStr };
+      }
+      return t;
+    }));
+  }, []);
+
   return {
     tasks,
     addTask,
@@ -130,5 +139,6 @@ export function useTasks() {
     importTasks,
     editTask,
     reorderTasks,
+    rescheduleTask,
   };
 }

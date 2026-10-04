@@ -263,7 +263,10 @@ export function DailyTaskList({
               <li 
                 key={task.id} 
                 draggable
-                onDragStart={(e) => handleDragStart(e, task.taskId)}
+                onDragStart={(e) => {
+                  handleDragStart(e, task.taskId);
+                  e.dataTransfer.setData('text/plain', task.taskId);
+                }}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, task.taskId)}
                 onDragEnd={() => setDraggedTaskId(null)}

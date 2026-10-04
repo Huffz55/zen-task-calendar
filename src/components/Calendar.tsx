@@ -17,12 +17,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface CalendarProps {
   selectedDate: Date;
   onSelectDate: (date: Date) => void;
-  // Optional: A way to know if a date has tasks to show an indicator
   getTaskCountForDate?: (dateStr: string) => number;
+  onDropTask?: (taskId: string, dateStr: string) => void;
 }
 
-export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate }: CalendarProps) {
+export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate, onDropTask }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(startOfMonth(selectedDate));
+  const [dragHoverDate, setDragHoverDate] = React.useState<string | null>(null);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -77,18 +78,32 @@ export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate }: Ca
         const isSelected = isSameDay(day, selectedDate);
         const isTodayDate = isToday(day);
         const isCurrentMonth = isSameMonth(day, monthStart);
+        const isHovered = dragHoverDate === dateStr;
 
         days.push(
           <div
             key={day.toString()}
             onClick={() => onSelectDate(cloneDay)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              setDragHoverDate(dateStr);
+            }}
+            onDragLeave={() => setDragHoverDate(null)}
+            onDrop={(e) => {
+              e.preventDefault();
+              const taskId = e.dataTransfer.getData('text/plain');
+              if (taskId && onDropTask) onDropTask(taskId, dateStr);
+              setDragHoverDate(null);
+            }}
             title={isTodayDate ? "Go to Today (T)" : undefined}
             className={`
               relative flex flex-col items-center justify-center p-1 md:p-2 min-h-[48px] md:min-h-[56px] text-sm cursor-pointer
-              border border-transparent transition-all duration-200 rounded-2xl flex-1
+              border transition-all duration-200 rounded-2xl flex-1
               ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600'}
-              ${isSelected ? 'bg-pink-100 text-pink-700 font-medium shadow-sm' : 'hover:bg-pink-50'}
+              ${isSelected ? 'bg-pink-100 text-pink-700 font-medium shadow-sm border-transparent' : 'hover:bg-pink-50 border-transparent'}
               ${isTodayDate && !isSelected ? 'border-pink-100 text-pink-500' : ''}
+              ${isHovered ? '!bg-pink-50/80 !border-pink-200 scale-105 z-10' : ''}
             `}
           >
             <span>{formattedDate}</span>
