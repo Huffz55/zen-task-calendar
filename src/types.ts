@@ -14,3 +14,15 @@ export interface DailyTask {
   isCompleted: boolean;
   taskId: string;
 }
+
+export interface ListItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface CustomList {
+  id: string;
+  title: string;
+  items: ListItem[];
+}

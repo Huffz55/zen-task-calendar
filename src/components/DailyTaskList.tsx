@@ -84,7 +84,6 @@ export function DailyTaskList({
   const handleToggle = (taskId: string, dateString: string, isCompleted: boolean) => {
     if (!isCompleted) {
       playSoftPop();
-      if (navigator.vibrate) navigator.vibrate(10);
 
       const isLastPending = tasks.filter(t => !t.isCompleted).length === 1;
       if (isLastPending) {
@@ -135,7 +134,9 @@ export function DailyTaskList({
     e.preventDefault();
     if (draggedTaskId && draggedTaskId !== targetTaskId) {
       onReorderTasks(draggedTaskId, targetTaskId);
-      if (navigator.vibrate) navigator.vibrate(10);
+      if (typeof window !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(40);
+      }
     }
     setDraggedTaskId(null);
   };

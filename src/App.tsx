@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyTaskList } from './components/DailyTaskList';
+import { CustomLists } from './components/CustomLists';
 import { useTasks } from './hooks/useTasks';
+import { useLists } from './hooks/useLists';
 import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -19,8 +21,10 @@ function App() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [initialTime, setInitialTime] = useState(25 * 60);
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
+  const [activeTab, setActiveTab] = useState<'tasks' | 'lists'>('tasks');
 
   const { tasks, addTask, deleteTask, restoreTask, toggleTaskCompletion, getTasksForDate, importTasks, editTask, reorderTasks, rescheduleTask } = useTasks();
+  const { lists, addList, deleteList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -160,12 +164,12 @@ function App() {
   };
 
   const handleExport = () => {
-    const dataStr = JSON.stringify(tasks, null, 2);
-    const blob = new Blob([dataStr], { type: 'text/plain' });
+    const dataStr = JSON.stringify({ tasks, lists }, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `noteapp-backup-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+    link.download = `noteapp-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -179,9 +183,25 @@ function App() {
       try {
         const content = event.target?.result as string;
         const parsed = JSON.parse(content);
-        const success = importTasks(parsed);
-        if (success) {
-          alert('Tasks imported successfully!');
+        
+        let successTasks = false;
+        let successLists = false;
+
+        if (Array.isArray(parsed)) {
+          // Legacy backup format (only tasks array)
+          successTasks = importTasks(parsed);
+        } else if (parsed && typeof parsed === 'object') {
+          // New backup format
+          if (Array.isArray(parsed.tasks)) {
+            successTasks = importTasks(parsed.tasks);
+          }
+          if (Array.isArray(parsed.lists) && importLists) {
+            successLists = importLists(parsed.lists);
+          }
+        }
+        
+        if (successTasks || successLists) {
+          alert('Backup restored successfully! 🌸');
         } else {
           alert('Invalid backup file format.');
         }
@@ -253,93 +273,134 @@ function App() {
   }, [dailyTasks]);
 
   return (
-    <div className={`h-[100dvh] overflow-hidden flex items-center justify-center p-4 md:p-6 font-sans relative transition-colors duration-[3000ms] ease-in-out ${getAmbientBackground()}`}>
-      <div className="max-w-6xl w-full flex gap-4 md:gap-6 h-full max-h-[850px] overflow-hidden">
+    <div className={`h-[100dvh] overflow-hidden flex flex-col items-center justify-center p-4 md:p-6 font-sans relative transition-colors duration-[3000ms] ease-in-out ${getAmbientBackground()}`}>
+      
+      {/* Tab Navigation */}
+      {!isZenMode && (
+        <div className="flex bg-white/60 backdrop-blur-md p-1 rounded-full shadow-sm mb-4 md:mb-6 border border-pink-50/80 z-10 shrink-0">
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={`px-5 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'tasks' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            Tasks
+          </button>
+          <button
+            onClick={() => setActiveTab('lists')}
+            className={`px-5 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'lists' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            Lists
+          </button>
+        </div>
+      )}
 
-        {/* Left Column - Header & Calendar */}
-        <div
-          className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-4 md:gap-6 h-full shrink-0 overflow-hidden
-            ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0' : 'w-full lg:w-5/12'}
-          `}
-        >
-          <header className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <p className="text-pink-300/70 text-sm font-medium tracking-wide italic">{getGreeting()}</p>
-                {currentStreak > 0 && (
-                  <span className="bg-pink-50 text-pink-400 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
-                    🔥 {currentStreak} Day{currentStreak > 1 ? 's' : ''}
-                  </span>
-                )}
+      <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
+        
+        {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
+        <div className={`absolute inset-0 flex gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+          ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-8 pointer-events-none'}
+        `}>
+          {/* Left Column - Header & Calendar */}
+          <div
+            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-4 md:gap-6 h-full shrink-0 overflow-hidden
+              ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0' : 'w-full lg:w-5/12'}
+            `}
+          >
+            <header className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-pink-300/70 text-sm font-medium tracking-wide italic">{getGreeting()}</p>
+                  {currentStreak > 0 && (
+                    <span className="bg-pink-50 text-pink-400 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                      🔥 {currentStreak} Day{currentStreak > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800 tracking-tight whitespace-nowrap">Plan your day</h1>
               </div>
-              <h1 className="text-2xl font-bold text-gray-800 tracking-tight whitespace-nowrap">Plan your day</h1>
-            </div>
-            <div className="flex gap-1 shrink-0">
-              <button
-                onClick={handleExport}
-                className="p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
-                title="Export Tasks"
-              >
-                <Download size={20} />
-              </button>
-              <label
-                className="p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
-                title="Import Tasks"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.currentTarget.querySelector('input')?.click();
-                }}
-              >
-                <Upload size={20} />
-                <input
-                  type="file"
-                  accept=".txt,.json"
-                  className="hidden"
-                  onChange={handleImport}
-                  tabIndex={-1}
-                />
-              </label>
-            </div>
-          </header>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={handleExport}
+                  className="p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  title="Export Tasks"
+                >
+                  <Download size={20} />
+                </button>
+                <label
+                  className="p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  title="Import Tasks"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.querySelector('input')?.click();
+                  }}
+                >
+                  <Upload size={20} />
+                  <input
+                    type="file"
+                    accept=".txt,.json"
+                    className="hidden"
+                    onChange={handleImport}
+                    tabIndex={-1}
+                  />
+                </label>
+              </div>
+            </header>
 
-          <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-[280px]">
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <Calendar
-                selectedDate={selectedDate}
-                onSelectDate={handleSelectDate}
-                getTaskCountForDate={getTaskCountForDate}
-                onDropTask={handleDropTaskToCalendar}
-              />
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-[280px]">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <Calendar
+                  selectedDate={selectedDate}
+                  onSelectDate={handleSelectDate}
+                  getTaskCountForDate={getTaskCountForDate}
+                  onDropTask={handleDropTaskToCalendar}
+                />
+              </div>
+              <div className="mt-3 text-xs text-gray-400 text-center whitespace-nowrap shrink-0">
+                Shortcuts: N (New) • F (Focus) • T (Today)
+              </div>
             </div>
-            <div className="mt-3 text-xs text-gray-400 text-center whitespace-nowrap shrink-0">
-              Shortcuts: N (New) • F (Focus) • T (Today)
+          </div>
+
+          {/* Right Column - Tasks */}
+          <div
+            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-full overflow-hidden flex flex-col shrink-0
+              ${isZenMode ? 'w-full max-w-2xl mx-auto' : 'w-full lg:w-7/12'}
+            `}
+          >
+            <div
+              key={selectedDate.getTime()}
+              className={`h-full flex flex-col overflow-hidden ${slideAnim === 'left' ? 'animate-slide-left' : slideAnim === 'right' ? 'animate-slide-right' : ''}`}
+            >
+              <DailyTaskList
+                selectedDate={selectedDate}
+                tasks={dailyTasks}
+                onToggleTask={toggleTaskCompletion}
+                onAddTask={addTask}
+                onDeleteTask={handleDeleteTask}
+                onEditTask={editTask}
+                onReorderTasks={reorderTasks}
+                isZenMode={isZenMode}
+                onToggleZenMode={() => setIsZenMode(!isZenMode)}
+              />
             </div>
           </div>
         </div>
 
-        {/* Right Column - Tasks */}
-        <div
-          className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-full overflow-hidden flex flex-col shrink-0
-            ${isZenMode ? 'w-full max-w-2xl mx-auto' : 'w-full lg:w-7/12'}
-          `}
-        >
-          <div
-            key={selectedDate.getTime()}
-            className={`h-full flex flex-col overflow-hidden ${slideAnim === 'left' ? 'animate-slide-left' : slideAnim === 'right' ? 'animate-slide-right' : ''}`}
-          >
-            <DailyTaskList
-              selectedDate={selectedDate}
-              tasks={dailyTasks}
-              onToggleTask={toggleTaskCompletion}
-              onAddTask={addTask}
-              onDeleteTask={handleDeleteTask}
-              onEditTask={editTask}
-              onReorderTasks={reorderTasks}
-              isZenMode={isZenMode}
-              onToggleZenMode={() => setIsZenMode(!isZenMode)}
+        {/* Lists Layout (Absolute Positioned for Smooth Transitions) */}
+        <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+          ${activeTab === 'lists' ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-8 pointer-events-none'}
+        `}>
+          <div className="w-full max-w-3xl h-full">
+            <CustomLists 
+              lists={lists} 
+              onAddList={addList} 
+              onDeleteList={deleteList}
+              onAddListItem={addListItem}
+              onDeleteListItem={deleteListItem}
+              onToggleListItem={toggleListItem}
             />
           </div>
         </div>
+        
       </div>
 
       {/* Offline Ready Toast */}

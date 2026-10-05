@@ -21,6 +21,11 @@ export const initAudioContext = () => {
 
 export const playSoftPop = () => {
   try {
+    // Premium Haptic Feedback (micro-vibration)
+    if (typeof window !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(40);
+    }
+
     const ctx = getAudioContext();
     if (!ctx) return;
     
