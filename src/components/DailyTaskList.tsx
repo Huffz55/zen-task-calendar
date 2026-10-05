@@ -167,7 +167,7 @@ export function DailyTaskList({
   };
 
   return (
-    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col overflow-hidden relative group/zen">
+    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden relative group/zen">
       <div className="mb-4 md:mb-6 flex justify-between items-start shrink-0">
         <div>
           <h3 className="text-xl md:text-2xl font-semibold text-gray-800">
@@ -209,7 +209,7 @@ export function DailyTaskList({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto mb-4 pr-2 min-h-0 relative">
+      <div className="flex-1 overflow-visible lg:overflow-y-auto mb-4 pr-0 md:pr-2 min-h-0 relative">
         {tasks.length === 0 ? (
           <div className="h-full min-h-[160px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl">
             <div className="absolute top-1/2 left-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>

@@ -296,7 +296,7 @@ function App() {
       <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
         
         {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-32 lg:pb-0
           ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           {/* Left Column - Header & Calendar */}
@@ -305,7 +305,7 @@ function App() {
               ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0 hidden lg:flex' : 'w-full lg:w-5/12'}
             `}
           >
-            <header className="bg-white p-4 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
+            <header className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-pink-300/70 text-sm font-medium tracking-wide italic">{getGreeting()}</p>
@@ -362,13 +362,13 @@ function App() {
 
           {/* Right Column - Tasks */}
           <div
-            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-full lg:h-full overflow-hidden flex flex-col shrink-0 flex-1 min-h-0
+            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-auto lg:h-full overflow-visible lg:overflow-hidden flex flex-col shrink-0 flex-1 min-h-0
               ${isZenMode ? 'w-full max-w-2xl mx-auto' : 'w-full lg:w-7/12'}
             `}
           >
             <div
               key={selectedDate.getTime()}
-              className={`h-full flex flex-col overflow-hidden ${slideAnim === 'left' ? 'animate-slide-left' : slideAnim === 'right' ? 'animate-slide-right' : ''}`}
+              className={`h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden ${slideAnim === 'left' ? 'animate-slide-left' : slideAnim === 'right' ? 'animate-slide-right' : ''}`}
             >
               <DailyTaskList
                 selectedDate={selectedDate}
@@ -386,10 +386,10 @@ function App() {
         </div>
 
         {/* Lists Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+        <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-32 lg:pb-0
           ${activeTab === 'lists' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none invisible -z-10'}
         `}>
-          <div className="w-full max-w-3xl h-full">
+          <div className="w-full max-w-3xl h-auto lg:h-full">
             <CustomLists 
               lists={lists} 
               onAddList={addList} 

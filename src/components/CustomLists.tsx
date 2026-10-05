@@ -41,7 +41,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
   };
 
   return (
-    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col overflow-hidden animate-slide-up-fade relative">
+    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden animate-slide-up-fade relative">
       <div className="mb-4 md:mb-6">
         <h3 className="text-xl md:text-2xl font-semibold text-gray-800 mb-4">My Checklists</h3>
         <form onSubmit={handleAddList} className="flex gap-2">
@@ -62,9 +62,9 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
         </form>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-4">
+      <div className="flex-1 overflow-visible lg:overflow-y-auto min-h-0 pr-0 md:pr-2 space-y-4 pb-10 md:pb-0">
         {lists.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-gray-400">
+          <div className="h-full flex flex-col items-center justify-center text-gray-400 py-10">
             <p>No lists yet. Create one above!</p>
           </div>
         ) : (
@@ -83,7 +83,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
 
               <ul className="space-y-1 mb-3">
                 {list.items.map(item => (
-                  <li key={item.id} className="group flex items-center justify-between p-2 rounded-xl hover:bg-pink-50/50 transition-colors">
+                  <li key={item.id} className="group flex items-center justify-between p-2 py-3 md:py-2 rounded-xl hover:bg-pink-50/50 transition-colors">
                     <div className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer min-h-[44px]" onClick={() => handleToggle(list.id, item.id, item.completed)}>
                       <button 
                         className={`transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px]
