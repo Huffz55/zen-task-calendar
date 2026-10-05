@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import type { DailyTask, RecurrenceType } from '../types';
-import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2, GripVertical } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop } from '../utils/audio';
 
@@ -239,12 +239,16 @@ export function DailyTaskList({
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, task.taskId)}
                 onDragEnd={() => setDraggedTaskId(null)}
-                className={`group flex items-center justify-between p-4 rounded-2xl border border-pink-50 hover:bg-pink-50/50 transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${draggedTaskId === task.taskId ? 'opacity-50 border-dashed border-pink-200' : ''}`}
+                className={`group flex items-center justify-between p-3 md:p-4 rounded-2xl border border-pink-50 hover:bg-pink-50/50 transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${draggedTaskId === task.taskId ? 'opacity-50 border-dashed border-pink-200' : ''}`}
               >
-                <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
+                  <div className="text-pink-100 hover:text-pink-300 cursor-grab active:cursor-grabbing px-1 touch-none hidden md:block">
+                    <GripVertical size={16} />
+                  </div>
+                  
                   <button 
                     onClick={() => handleToggle(task.taskId, dateStr, task.isCompleted)}
-                    className={`relative transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none
+                    className={`relative transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px]
                     ${task.isCompleted 
                       ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
                       : 'text-gray-300 group-hover:text-pink-200 active:scale-90'
@@ -261,12 +265,12 @@ export function DailyTaskList({
                       onChange={(e) => setEditTitle(e.target.value)}
                       onKeyDown={(e) => handleEditKeyDown(e, task.taskId)}
                       onBlur={() => saveEdit(task.taskId)}
-                      className="text-lg bg-transparent border-b border-pink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded text-gray-700 flex-1 truncate"
+                      className="text-base md:text-lg bg-transparent border-b border-pink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded text-gray-700 flex-1 truncate py-2"
                     />
                   ) : (
                     <span 
                       onDoubleClick={() => handleDoubleClick(task.taskId, task.title)}
-                      className={`text-lg transition-all duration-300 flex-1 truncate cursor-text select-none ${task.isCompleted ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}
+                      className={`text-base md:text-lg transition-all duration-300 flex-1 truncate cursor-text select-none py-2 ${task.isCompleted ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}
                     >
                       {renderTaskTitle(task.title)}
                     </span>
@@ -275,7 +279,7 @@ export function DailyTaskList({
                 
                 <button 
                   onClick={(e) => { e.stopPropagation(); onDeleteTask(task.taskId); }}
-                  className="opacity-0 group-hover:opacity-100 p-2 text-pink-200 hover:text-pink-400 transition-opacity duration-300 rounded-full shrink-0 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full shrink-0 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
                   title="Delete task"
                 >
                   <Trash2 size={18} />

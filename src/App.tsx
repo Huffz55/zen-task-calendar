@@ -277,16 +277,16 @@ function App() {
       
       {/* Tab Navigation */}
       {!isZenMode && (
-        <div className="flex bg-white/60 backdrop-blur-md p-1 rounded-full shadow-sm mb-4 md:mb-6 border border-pink-50/80 z-10 shrink-0">
+        <div className="flex bg-white/60 backdrop-blur-md p-1.5 rounded-full shadow-sm mb-4 md:mb-6 border border-pink-50/80 z-10 shrink-0">
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`px-5 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'tasks' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'tasks' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
           >
             Tasks
           </button>
           <button
             onClick={() => setActiveTab('lists')}
-            className={`px-5 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'lists' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'lists' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
           >
             Lists
           </button>
@@ -296,16 +296,16 @@ function App() {
       <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
         
         {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
-          ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-8 pointer-events-none'}
+        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+          ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           {/* Left Column - Header & Calendar */}
           <div
-            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-4 md:gap-6 h-full shrink-0 overflow-hidden
-              ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0' : 'w-full lg:w-5/12'}
+            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-4 md:gap-6 shrink-0 lg:h-full lg:overflow-hidden
+              ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0 hidden lg:flex' : 'w-full lg:w-5/12'}
             `}
           >
-            <header className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
+            <header className="bg-white p-4 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-pink-300/70 text-sm font-medium tracking-wide italic">{getGreeting()}</p>
@@ -320,13 +320,13 @@ function App() {
               <div className="flex gap-1 shrink-0">
                 <button
                   onClick={handleExport}
-                  className="p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  className="p-3 lg:p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
                   title="Export Tasks"
                 >
                   <Download size={20} />
                 </button>
                 <label
-                  className="p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  className="p-3 lg:p-2 text-pink-300 hover:bg-pink-50 hover:text-pink-400 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
                   title="Import Tasks"
                   tabIndex={0}
                   onKeyDown={(e) => {
@@ -345,8 +345,8 @@ function App() {
               </div>
             </header>
 
-            <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-[280px]">
-              <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-none lg:flex-1 lg:overflow-hidden flex flex-col lg:min-h-0 min-w-[280px]">
+              <div className="h-auto lg:h-full lg:overflow-hidden">
                 <Calendar
                   selectedDate={selectedDate}
                   onSelectDate={handleSelectDate}
@@ -354,7 +354,7 @@ function App() {
                   onDropTask={handleDropTaskToCalendar}
                 />
               </div>
-              <div className="mt-3 text-xs text-gray-400 text-center whitespace-nowrap shrink-0">
+              <div className="mt-3 text-xs text-gray-400 text-center whitespace-nowrap shrink-0 hidden lg:block">
                 Shortcuts: N (New) • F (Focus) • T (Today)
               </div>
             </div>
@@ -362,7 +362,7 @@ function App() {
 
           {/* Right Column - Tasks */}
           <div
-            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-full overflow-hidden flex flex-col shrink-0
+            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-full lg:h-full overflow-hidden flex flex-col shrink-0 flex-1 min-h-0
               ${isZenMode ? 'w-full max-w-2xl mx-auto' : 'w-full lg:w-7/12'}
             `}
           >
@@ -387,7 +387,7 @@ function App() {
 
         {/* Lists Layout (Absolute Positioned for Smooth Transitions) */}
         <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
-          ${activeTab === 'lists' ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-8 pointer-events-none'}
+          ${activeTab === 'lists' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           <div className="w-full max-w-3xl h-full">
             <CustomLists 
@@ -417,61 +417,61 @@ function App() {
       {isZenMode && (
         <div className="fixed top-6 right-6 md:top-8 md:right-8 z-50 flex flex-col items-end gap-2 group">
           
-          <div className="flex items-center gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+          <div className="flex items-center gap-3 md:opacity-80 md:group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:translate-x-4 md:group-hover:translate-x-0">
               <button 
                 onClick={() => {
                   setTimeLeft(prev => Math.max(0, prev - 5 * 60));
                   setInitialTime(prev => Math.max(0, prev - 5 * 60));
                 }}
-                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                 title="Subtract 5m"
               >
-                <Minus size={14} />
+                <Minus size={16} />
               </button>
               <button 
                 onClick={() => {
                   setTimeLeft(prev => prev + 5 * 60);
                   setInitialTime(prev => prev + 5 * 60);
                 }}
-                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                 title="Add 5m"
               >
-                <Plus size={14} />
+                <Plus size={16} />
               </button>
               
-              <div className="w-px h-4 bg-pink-100 mx-1"></div>
+              <div className="w-px h-6 md:h-4 bg-pink-100 mx-1"></div>
               
               <button 
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                 title={isTimerRunning ? "Pause" : "Play"}
               >
-                {isTimerRunning ? <Pause size={14} /> : <Play size={14} />}
+                {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
               </button>
               <button 
                 onClick={() => {
                   setTimeLeft(initialTime);
                   setIsTimerRunning(false);
                 }}
-                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                 title="Reset"
               >
-                <RotateCcw size={14} />
+                <RotateCcw size={16} />
               </button>
             </div>
             
-            <div className="text-pink-400 text-lg font-medium tracking-widest font-mono select-none">
+            <div className="text-pink-400 text-lg md:text-xl font-medium tracking-widest font-mono select-none px-2">
               {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
             </div>
           </div>
 
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-y-2 group-hover:translate-y-0">
+          <div className="flex flex-wrap items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:-translate-y-2 md:group-hover:translate-y-0">
             {[5, 10, 15, 20, 30].map(mins => (
               <button
                 key={mins}
                 onClick={() => handleTimerChange(mins)}
-                className="px-2 py-1 text-xs font-medium text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                className="min-w-[44px] min-h-[44px] px-2 py-1 text-xs md:text-sm font-medium text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
               >
                 {mins}m
               </button>

@@ -84,9 +84,9 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
               <ul className="space-y-1 mb-3">
                 {list.items.map(item => (
                   <li key={item.id} className="group flex items-center justify-between p-2 rounded-xl hover:bg-pink-50/50 transition-colors">
-                    <div className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer" onClick={() => handleToggle(list.id, item.id, item.completed)}>
+                    <div className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer min-h-[44px]" onClick={() => handleToggle(list.id, item.id, item.completed)}>
                       <button 
-                        className={`transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none
+                        className={`transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px]
                         ${item.completed 
                           ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
                           : 'text-gray-300 group-hover:text-pink-200'
@@ -94,16 +94,16 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
                       >
                         {item.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                       </button>
-                      <span className={`text-[15px] truncate transition-all duration-300 ${item.completed ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}>
+                      <span className={`text-[15px] truncate transition-all duration-300 py-2 ${item.completed ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}>
                         {item.text}
                       </span>
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); onDeleteListItem(list.id, item.id); }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-pink-200 hover:text-pink-400 transition-opacity rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                      className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-200 hover:text-pink-400 transition-opacity rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                       title="Delete item"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={18} />
                     </button>
                   </li>
                 ))}
