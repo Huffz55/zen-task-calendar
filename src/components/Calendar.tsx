@@ -99,7 +99,7 @@ export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate, onDr
             title={isTodayDate ? "Go to Today (T)" : undefined}
             className={`
               relative flex flex-col items-center justify-center p-1 md:p-2 min-h-[48px] md:min-h-[56px] text-sm cursor-pointer
-              border transition-all duration-200 rounded-2xl flex-1
+              border transition-all duration-200 rounded-2xl flex-1 shrink-0
               ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600'}
               ${isSelected ? 'bg-pink-100 text-pink-700 font-medium shadow-sm border-transparent' : 'hover:bg-pink-50 border-transparent'}
               ${isTodayDate && !isSelected ? 'border-pink-100 text-pink-500' : ''}
@@ -117,17 +117,17 @@ export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate, onDr
         day = addDays(day, 1);
       }
       rows.push(
-        <div className="flex gap-1 mb-1 flex-1" key={day.toString()}>
+        <div className="flex gap-1 mb-1 flex-1 shrink-0" key={day.toString()}>
           {days}
         </div>
       );
       days = [];
     }
-    return <div className="flex flex-col flex-1 min-h-0">{rows}</div>;
+    return <div className="flex flex-col flex-1 min-h-0 pb-6">{rows}</div>;
   };
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col overflow-hidden">
+    <div className="bg-white p-4 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col overflow-visible">
       {renderHeader()}
       {renderDays()}
       {renderCells()}

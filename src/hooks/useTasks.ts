@@ -36,6 +36,36 @@ export function useTasks() {
     setTasks(prev => prev.filter(t => t.id !== taskId));
   }, []);
 
+  const deleteTaskInstance = useCallback((taskId: string, dateStr: string) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        return {
+          ...task,
+          excludedDates: [...(task.excludedDates || []), dateStr]
+        };
+      }
+      return task;
+    }));
+  }, []);
+
+  const deleteTaskFuture = useCallback((taskId: string, dateStr: string) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        // Find the day before dateStr
+        const targetDate = new Date(dateStr);
+        targetDate.setDate(targetDate.getDate() - 1);
+        // Format to YYYY-MM-DD
+        const prevDayStr = targetDate.toISOString().split('T')[0];
+        
+        return {
+          ...task,
+          endDate: prevDayStr
+        };
+      }
+      return task;
+    }));
+  }, []);
+
   const toggleTaskCompletion = useCallback((taskId: string, dateStr: string) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
@@ -66,6 +96,12 @@ export function useTasks() {
       // If the target date is before the task's start date, it shouldn't appear
       if (dateStr < task.date) return false;
 
+      // If the date is explicitly excluded
+      if (task.excludedDates && task.excludedDates.includes(dateStr)) return false;
+
+      // If the date is after the task's recurrence end date
+      if (task.endDate && dateStr > task.endDate) return false;
+
       const diffDays = differenceInDays(targetDate, startDate);
 
       if (task.recurrence === 'none') {
@@ -83,6 +119,7 @@ export function useTasks() {
       taskId: task.id,
       title: task.title,
       isCompleted: task.completedDates.includes(dateStr),
+      recurrence: task.recurrence,
     }));
   }, [tasks]);
 
@@ -117,7 +154,13 @@ export function useTasks() {
   }, []);
 
   const restoreTask = useCallback((task: Task) => {
-    setTasks(prev => [...prev, task]);
+    setTasks(prev => {
+      const exists = prev.some(t => t.id === task.id);
+      if (exists) {
+        return prev.map(t => t.id === task.id ? task : t);
+      }
+      return [...prev, task];
+    });
   }, []);
 
   const rescheduleTask = useCallback((taskId: string, newDateStr: string) => {
@@ -133,6 +176,8 @@ export function useTasks() {
     tasks,
     addTask,
     deleteTask,
+    deleteTaskInstance,
+    deleteTaskFuture,
     restoreTask,
     toggleTaskCompletion,
     getTasksForDate,

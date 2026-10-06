@@ -6,6 +6,8 @@ export interface Task {
   date: string; // YYYY-MM-DD
   recurrence: RecurrenceType;
   completedDates: string[]; // List of YYYY-MM-DD when this task was completed
+  excludedDates?: string[]; // List of YYYY-MM-DD when this task was skipped/deleted for that specific day
+  endDate?: string; // YYYY-MM-DD when this task recurrence ends
 }
 
 export interface DailyTask {
@@ -13,6 +15,7 @@ export interface DailyTask {
   title: string;
   isCompleted: boolean;
   taskId: string;
+  recurrence: RecurrenceType;
 }
 
 export interface ListItem {

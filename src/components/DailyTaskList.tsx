@@ -11,6 +11,8 @@ interface DailyTaskListProps {
   onToggleTask: (taskId: string, dateStr: string) => void;
   onAddTask: (title: string, dateStr: string, recurrence: RecurrenceType) => void;
   onDeleteTask: (taskId: string) => void;
+  onDeleteTaskInstance?: (taskId: string, dateStr: string) => void;
+  onDeleteTaskFuture?: (taskId: string, dateStr: string) => void;
   onEditTask: (taskId: string, newTitle: string) => void;
   onReorderTasks: (draggedId: string, targetId: string) => void;
   isZenMode?: boolean;
@@ -30,6 +32,8 @@ export function DailyTaskList({
   onToggleTask, 
   onAddTask,
   onDeleteTask,
+  onDeleteTaskInstance,
+  onDeleteTaskFuture,
   onEditTask,
   onReorderTasks,
   isZenMode,
@@ -51,6 +55,9 @@ export function DailyTaskList({
   // Inline editing state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+
+  // Delete modal state
+  const [taskToDelete, setTaskToDelete] = useState<{ taskId: string, recurrence: RecurrenceType } | null>(null);
 
   // Drag and drop state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -368,7 +375,14 @@ export function DailyTaskList({
                 </div>
                 
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onDeleteTask(task.taskId); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (task.recurrence !== 'none') {
+                      setTaskToDelete({ taskId: task.taskId, recurrence: task.recurrence });
+                    } else {
+                      onDeleteTask(task.taskId);
+                    }
+                  }}
                   className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full shrink-0 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
                   title="Delete task"
                 >
@@ -454,6 +468,56 @@ export function DailyTaskList({
           </form>
         )}
       </div>
+
+      {/* Delete Recurring Task Modal */}
+      {taskToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 shadow-xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Delete recurring task</h3>
+            <p className="text-gray-500 text-sm mb-6">This is a repeating task. How would you like to delete it?</p>
+            
+            <div className="flex flex-col gap-3">
+              {onDeleteTaskInstance && (
+                <button
+                  onClick={() => {
+                    onDeleteTaskInstance(taskToDelete.taskId, dateStr);
+                    setTaskToDelete(null);
+                  }}
+                  className="w-full py-3 px-4 text-left bg-gray-50 hover:bg-pink-50 rounded-xl text-gray-700 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                >
+                  Delete this day only
+                </button>
+              )}
+              {onDeleteTaskFuture && (
+                <button
+                  onClick={() => {
+                    onDeleteTaskFuture(taskToDelete.taskId, dateStr);
+                    setTaskToDelete(null);
+                  }}
+                  className="w-full py-3 px-4 text-left bg-gray-50 hover:bg-pink-50 rounded-xl text-gray-700 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                >
+                  Delete this and following days
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  onDeleteTask(taskToDelete.taskId);
+                  setTaskToDelete(null);
+                }}
+                className="w-full py-3 px-4 text-left bg-pink-50 hover:bg-pink-100 text-pink-600 font-medium rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+              >
+                Delete all tasks
+              </button>
+              <button
+                onClick={() => setTaskToDelete(null)}
+                className="w-full py-3 mt-2 text-center text-gray-400 hover:text-gray-600 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-gray-200 focus-visible:outline-none rounded-xl"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

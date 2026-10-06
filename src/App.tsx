@@ -23,7 +23,7 @@ function App() {
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
   const [activeTab, setActiveTab] = useState<'tasks' | 'lists'>('tasks');
 
-  const { tasks, addTask, deleteTask, restoreTask, toggleTaskCompletion, getTasksForDate, importTasks, editTask, reorderTasks, rescheduleTask } = useTasks();
+  const { tasks, addTask, deleteTask, deleteTaskInstance, deleteTaskFuture, restoreTask, toggleTaskCompletion, getTasksForDate, importTasks, editTask, reorderTasks, rescheduleTask } = useTasks();
   const { lists, addList, deleteList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
 
   const {
@@ -143,15 +143,32 @@ function App() {
   }, [tasks, getTasksForDate]);
 
   const handleDeleteTask = (taskId: string) => {
-    // Find the original task object to allow restoring
     const taskToDelete = tasks.find(t => t.id === taskId);
     if (taskToDelete) {
       deleteTask(taskId);
       if (toast?.timeoutId) clearTimeout(toast.timeoutId);
-      const timeoutId = setTimeout(() => {
-        setToast(null);
-      }, 5000);
+      const timeoutId = setTimeout(() => setToast(null), 5000);
       setToast({ task: taskToDelete, timeoutId });
+    }
+  };
+
+  const handleDeleteTaskInstance = (taskId: string, dateStr: string) => {
+    const taskToModify = tasks.find(t => t.id === taskId);
+    if (taskToModify) {
+      deleteTaskInstance(taskId, dateStr);
+      if (toast?.timeoutId) clearTimeout(toast.timeoutId);
+      const timeoutId = setTimeout(() => setToast(null), 5000);
+      setToast({ task: taskToModify, timeoutId });
+    }
+  };
+
+  const handleDeleteTaskFuture = (taskId: string, dateStr: string) => {
+    const taskToModify = tasks.find(t => t.id === taskId);
+    if (taskToModify) {
+      deleteTaskFuture(taskId, dateStr);
+      if (toast?.timeoutId) clearTimeout(toast.timeoutId);
+      const timeoutId = setTimeout(() => setToast(null), 5000);
+      setToast({ task: taskToModify, timeoutId });
     }
   };
 
@@ -345,8 +362,8 @@ function App() {
               </div>
             </header>
 
-            <div className="flex-none lg:flex-1 lg:overflow-hidden flex flex-col lg:min-h-0 min-w-[280px]">
-              <div className="h-auto lg:h-full lg:overflow-hidden">
+            <div className="flex-none lg:flex-1 lg:overflow-visible flex flex-col lg:min-h-0 min-w-[280px]">
+              <div className="h-auto lg:h-full lg:overflow-visible">
                 <Calendar
                   selectedDate={selectedDate}
                   onSelectDate={handleSelectDate}
@@ -368,7 +385,7 @@ function App() {
           >
             <div
               key={selectedDate.getTime()}
-              className={`h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden ${slideAnim === 'left' ? 'animate-slide-left' : slideAnim === 'right' ? 'animate-slide-right' : ''}`}
+              className={`h-auto lg:h-full flex flex-col overflow-visible ${slideAnim === 'left' ? 'animate-slide-left' : slideAnim === 'right' ? 'animate-slide-right' : ''}`}
             >
               <DailyTaskList
                 selectedDate={selectedDate}
@@ -376,6 +393,8 @@ function App() {
                 onToggleTask={toggleTaskCompletion}
                 onAddTask={addTask}
                 onDeleteTask={handleDeleteTask}
+                onDeleteTaskInstance={handleDeleteTaskInstance}
+                onDeleteTaskFuture={handleDeleteTaskFuture}
                 onEditTask={editTask}
                 onReorderTasks={reorderTasks}
                 isZenMode={isZenMode}
