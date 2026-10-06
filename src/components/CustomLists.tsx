@@ -44,13 +44,13 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
     <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden animate-slide-up-fade relative">
       <div className="mb-4 md:mb-6">
         <h3 className="text-xl md:text-2xl font-semibold text-gray-800 mb-4">My Checklists</h3>
-        <form onSubmit={handleAddList} className="flex gap-2">
+        <form onSubmit={handleAddList} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <input
             type="text"
             value={newListTitle}
             onChange={(e) => setNewListTitle(e.target.value)}
             placeholder="Create a new list..."
-            className="flex-1 bg-pink-50/30 border border-pink-100 px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded-xl text-gray-700 placeholder-gray-400"
+            className="flex-1 min-w-0 bg-pink-50/30 border border-pink-100 px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded-xl text-gray-700 placeholder-gray-400"
           />
           <button 
             type="submit"

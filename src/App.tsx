@@ -222,7 +222,7 @@ function App() {
 
   const getAmbientBackground = () => {
     if (currentHour >= 6 && currentHour < 12) return "bg-[#fffbf6]"; // Peach
-    if (currentHour >= 12 && currentHour < 17) return "bg-white"; // White
+    if (currentHour >= 12 && currentHour < 17) return "bg-slate-50"; // Light Slate
     if (currentHour >= 17 && currentHour < 20) return "bg-[#fff5f8]"; // Sunset Pink
     return "bg-[#f9f7fb]"; // Lavender
   };
@@ -380,6 +380,13 @@ function App() {
                 onReorderTasks={reorderTasks}
                 isZenMode={isZenMode}
                 onToggleZenMode={() => setIsZenMode(!isZenMode)}
+                timeLeft={timeLeft}
+                setTimeLeft={setTimeLeft}
+                initialTime={initialTime}
+                setInitialTime={setInitialTime}
+                isTimerRunning={isTimerRunning}
+                setIsTimerRunning={setIsTimerRunning}
+                handleTimerChange={handleTimerChange}
               />
             </div>
           </div>
@@ -413,73 +420,7 @@ function App() {
         </div>
       )}
 
-      {/* Zen Mode Pomodoro Timer */}
-      {isZenMode && (
-        <div className="fixed top-6 right-6 md:top-8 md:right-8 z-50 flex flex-col items-end gap-2 group">
-          
-          <div className="flex items-center gap-3 md:opacity-80 md:group-hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:translate-x-4 md:group-hover:translate-x-0">
-              <button 
-                onClick={() => {
-                  setTimeLeft(prev => Math.max(0, prev - 5 * 60));
-                  setInitialTime(prev => Math.max(0, prev - 5 * 60));
-                }}
-                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                title="Subtract 5m"
-              >
-                <Minus size={16} />
-              </button>
-              <button 
-                onClick={() => {
-                  setTimeLeft(prev => prev + 5 * 60);
-                  setInitialTime(prev => prev + 5 * 60);
-                }}
-                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                title="Add 5m"
-              >
-                <Plus size={16} />
-              </button>
-              
-              <div className="w-px h-6 md:h-4 bg-pink-100 mx-1"></div>
-              
-              <button 
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                title={isTimerRunning ? "Pause" : "Play"}
-              >
-                {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
-              </button>
-              <button 
-                onClick={() => {
-                  setTimeLeft(initialTime);
-                  setIsTimerRunning(false);
-                }}
-                className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                title="Reset"
-              >
-                <RotateCcw size={16} />
-              </button>
-            </div>
-            
-            <div className="text-pink-400 text-lg md:text-xl font-medium tracking-widest font-mono select-none px-2">
-              {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:-translate-y-2 md:group-hover:translate-y-0">
-            {[5, 10, 15, 20, 30].map(mins => (
-              <button
-                key={mins}
-                onClick={() => handleTimerChange(mins)}
-                className="min-w-[44px] min-h-[44px] px-2 py-1 text-xs md:text-sm font-medium text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-              >
-                {mins}m
-              </button>
-            ))}
-          </div>
-
-        </div>
-      )}
 
       {/* PWA Update Toast */}
       {needRefresh && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import type { DailyTask, RecurrenceType } from '../types';
-import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2, GripVertical } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2, GripVertical, Play, Pause, RotateCcw, Minus } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop } from '../utils/audio';
 
@@ -15,6 +15,13 @@ interface DailyTaskListProps {
   onReorderTasks: (draggedId: string, targetId: string) => void;
   isZenMode?: boolean;
   onToggleZenMode?: () => void;
+  timeLeft?: number;
+  setTimeLeft?: React.Dispatch<React.SetStateAction<number>>;
+  initialTime?: number;
+  setInitialTime?: React.Dispatch<React.SetStateAction<number>>;
+  isTimerRunning?: boolean;
+  setIsTimerRunning?: React.Dispatch<React.SetStateAction<boolean>>;
+  handleTimerChange?: (minutes: number) => void;
 }
 
 export function DailyTaskList({ 
@@ -26,7 +33,14 @@ export function DailyTaskList({
   onEditTask,
   onReorderTasks,
   isZenMode,
-  onToggleZenMode
+  onToggleZenMode,
+  timeLeft = 25 * 60,
+  setTimeLeft,
+  initialTime = 25 * 60,
+  setInitialTime,
+  isTimerRunning,
+  setIsTimerRunning,
+  handleTimerChange
 }: DailyTaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
@@ -168,51 +182,127 @@ export function DailyTaskList({
 
   return (
     <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden relative group/zen">
-      <div className="mb-4 md:mb-6 flex justify-between items-start shrink-0">
-        <div>
-          <h3 className="text-xl md:text-2xl font-semibold text-gray-800">
-            {format(selectedDate, 'EEEE')}
-          </h3>
-          <p className="text-pink-300 font-medium text-sm md:text-base">
-            {format(selectedDate, 'MMMM d, yyyy')}
-          </p>
-        </div>
-        
-        <div className="flex gap-4">
-          <div className="flex flex-col items-end justify-center">
-            {isPerfectDay ? (
-              <div aria-live="polite" className="text-xs md:text-sm font-medium text-pink-400 flex items-center gap-1 mb-1 transition-all duration-500">
-                Perfect Day 🌸
-              </div>
-            ) : (
-              <div className="text-[10px] md:text-xs text-gray-400 mb-1 font-medium transition-all duration-500">
-                {tasks.length > 0 ? `${completedTasks} / ${tasks.length} done` : 'No tasks'}
-              </div>
-            )}
-            <div className="w-20 md:w-24 h-1.5 bg-pink-50 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-pink-300 rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
+      <div className="mb-4 md:mb-6 flex flex-col shrink-0">
+        <div className="flex justify-between items-start w-full">
+          <div>
+            <h3 className="text-xl md:text-2xl font-semibold text-gray-800">
+              {format(selectedDate, 'EEEE')}
+            </h3>
+            <p className="text-pink-300 font-medium text-sm md:text-base">
+              {format(selectedDate, 'MMMM d, yyyy')}
+            </p>
           </div>
           
-          {onToggleZenMode && (
-            <button 
-              onClick={onToggleZenMode}
-              className="opacity-0 group-hover/zen:opacity-100 p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100"
-              title={isZenMode ? "Exit Focus Mode (F)" : "Focus Mode (F)"}
-            >
-              {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-            </button>
-          )}
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center justify-center">
+              {isPerfectDay ? (
+                <div aria-live="polite" className="text-xs md:text-sm font-medium text-pink-400 flex items-center gap-1 mb-1.5 transition-all duration-500">
+                  Perfect Day 🌸
+                </div>
+              ) : (
+                <div className="text-[10px] md:text-xs text-gray-400 mb-1.5 font-medium text-center transition-all duration-500">
+                  {tasks.length > 0 ? `${completedTasks} / ${tasks.length} done` : 'No tasks'}
+                </div>
+              )}
+              <div className="w-20 md:w-24 h-1.5 bg-pink-50 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-pink-300 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+            
+            {onToggleZenMode && (
+              <button 
+                onClick={onToggleZenMode}
+                className="opacity-100 md:opacity-0 md:group-hover/zen:opacity-100 p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100"
+                title={isZenMode ? "Exit Focus Mode (F)" : "Focus Mode (F)"}
+              >
+                {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Zen Mode Pomodoro Timer */}
+        {isZenMode && (
+          <div className="static md:fixed md:top-8 md:right-8 md:z-50 flex flex-col md:items-end gap-3 md:gap-2 group w-full md:w-auto mt-6 md:mt-0 bg-pink-50/50 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none">
+            
+            <div className="flex flex-col sm:flex-row md:flex-row items-center gap-3 md:opacity-80 md:group-hover:opacity-100 transition-opacity justify-between md:justify-end w-full md:w-auto">
+              <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:translate-x-4 md:group-hover:translate-x-0 w-full sm:w-auto justify-center">
+                <button 
+                  onClick={() => {
+                    if(setTimeLeft && setInitialTime) {
+                      setTimeLeft(prev => Math.max(0, prev - 5 * 60));
+                      setInitialTime(prev => Math.max(0, prev - 5 * 60));
+                    }
+                  }}
+                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                  title="Subtract 5m"
+                >
+                  <Minus size={16} />
+                </button>
+                <button 
+                  onClick={() => {
+                    if(setTimeLeft && setInitialTime) {
+                      setTimeLeft(prev => prev + 5 * 60);
+                      setInitialTime(prev => prev + 5 * 60);
+                    }
+                  }}
+                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                  title="Add 5m"
+                >
+                  <Plus size={16} />
+                </button>
+                
+                <div className="w-px h-6 md:h-4 bg-pink-200 md:bg-pink-100 mx-1"></div>
+                
+                <button 
+                  onClick={() => setIsTimerRunning && setIsTimerRunning(!isTimerRunning)}
+                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                  title={isTimerRunning ? "Pause" : "Play"}
+                >
+                  {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
+                </button>
+                <button 
+                  onClick={() => {
+                    if(setTimeLeft && initialTime !== undefined && setIsTimerRunning) {
+                      setTimeLeft(initialTime);
+                      setIsTimerRunning(false);
+                    }
+                  }}
+                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                  title="Reset"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              </div>
+              
+              <div className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right">
+                {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-start md:justify-end gap-1.5 md:gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:-translate-y-2 md:group-hover:translate-y-0 w-full md:w-auto">
+              {[5, 10, 15, 20, 30].map(mins => (
+                <button
+                  key={mins}
+                  onClick={() => handleTimerChange && handleTimerChange(mins)}
+                  className="flex-1 sm:flex-none min-w-[44px] min-h-[44px] px-3 md:px-2 py-2 md:py-1 text-sm md:text-sm font-medium text-pink-400 md:text-pink-300 bg-white md:bg-transparent hover:text-pink-600 md:hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-xl md:rounded-lg shadow-sm md:shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-visible lg:overflow-y-auto mb-4 pr-0 md:pr-2 min-h-0 relative">
+      <div className="flex-1 overflow-visible lg:overflow-y-auto mb-4 pr-0 md:pr-2 min-h-0 relative w-full max-w-full">
         {tasks.length === 0 ? (
-          <div className="h-full min-h-[160px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl">
-            <div className="absolute top-1/2 left-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>
+          <div className="h-full min-h-[160px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>
             
             <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-4 text-pink-200 relative z-10">
               <CheckCircle2 size={32} />
@@ -300,7 +390,7 @@ export function DailyTaskList({
             Add a new task
           </button>
         ) : (
-          <form onSubmit={handleAddTask} className="flex flex-col gap-4 bg-pink-50/30 p-4 rounded-2xl border border-pink-50">
+          <form onSubmit={handleAddTask} className="flex flex-col gap-4 bg-transparent md:bg-pink-50/30 p-0 md:p-4 rounded-none md:rounded-2xl border-none md:border md:border-pink-50">
             <input
               type="text"
               autoFocus
