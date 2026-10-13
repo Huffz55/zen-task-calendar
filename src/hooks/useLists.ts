@@ -15,6 +15,16 @@ export function useLists(storage: IListStorage = defaultListStorage) {
     storage.saveLists(lists);
   }, [lists, storage]);
 
+  // Real-time cloud subscription
+  useEffect(() => {
+    if (storage.subscribeLists) {
+      const unsubscribe = storage.subscribeLists((remoteLists) => {
+        setLists(remoteLists);
+      });
+      return unsubscribe;
+    }
+  }, [storage]);
+
   // Cross-tab synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {

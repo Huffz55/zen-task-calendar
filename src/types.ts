@@ -11,6 +11,7 @@ export interface Task {
   completedDates: string[]; // List of YYYY-MM-DD when this task was completed
   excludedDates?: string[]; // List of YYYY-MM-DD when this task was skipped/deleted for that specific day
   endDate?: string; // YYYY-MM-DD when this task recurrence ends
+  updatedAt?: number; // epoch ms for conflict resolution
 }
 
 export interface DailyTask {
@@ -32,4 +33,12 @@ export interface CustomList {
   id: string;
   title: string;
   items: ListItem[];
+  updatedAt?: number; // epoch ms for conflict resolution
 }
+
+export interface SyncDocState<T> {
+  items: T[];
+  deletedIds: string[];
+  updatedAt: number;
+}
+

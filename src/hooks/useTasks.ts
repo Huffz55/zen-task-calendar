@@ -50,6 +50,16 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     storage.saveTasks(tasks);
   }, [tasks, storage]);
 
+  // Real-time cloud subscription
+  useEffect(() => {
+    if (storage.subscribeTasks) {
+      const unsubscribe = storage.subscribeTasks((remoteTasks) => {
+        setTasks(remoteTasks);
+      });
+      return unsubscribe;
+    }
+  }, [storage]);
+
   // Cross-tab synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {

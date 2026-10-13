@@ -8,10 +8,11 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud } from 'lucide-react';
 import { initAudioContext } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
+import { SyncModal } from './components/SyncModal';
 import { validateBackupPayload } from './utils/validation';
 import { useZenTimer } from './hooks/useZenTimer';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -30,6 +31,7 @@ function App() {
   const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => {
     return (localStorage.getItem('zen_theme') as AppTheme) || 'sakura';
   });
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [notification, setNotification] = useState<AppToast | null>(null);
 
   const showToast = useCallback((toastData: {
@@ -469,6 +471,14 @@ function App() {
               Lists
             </button>
           </div>
+          <button
+            onClick={() => setIsSyncModalOpen(true)}
+            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-pink-500 hover:text-pink-600 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
+            title="Cloud Sync"
+          >
+            <Cloud size={16} />
+            <span className="hidden sm:inline">Sync</span>
+          </button>
           <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleThemeChange} />
         </div>
       )}
@@ -691,6 +701,12 @@ function App() {
           </div>
         </div>
       )}
+
+      <SyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        onShowToast={showToast}
+      />
     </div>
   );
 }
