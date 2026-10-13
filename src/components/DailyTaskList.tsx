@@ -24,6 +24,9 @@ interface DailyTaskListProps {
   isTimerRunning?: boolean;
   setIsTimerRunning?: React.Dispatch<React.SetStateAction<boolean>>;
   handleTimerChange?: (minutes: number) => void;
+  onToggleTimer?: () => void;
+  onResetTimer?: () => void;
+  onAdjustTimer?: (seconds: number) => void;
 }
 
 export function DailyTaskList({ 
@@ -44,7 +47,10 @@ export function DailyTaskList({
   setInitialTime,
   isTimerRunning,
   setIsTimerRunning,
-  handleTimerChange
+  handleTimerChange,
+  onToggleTimer,
+  onResetTimer,
+  onAdjustTimer
 }: DailyTaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
@@ -201,7 +207,7 @@ export function DailyTaskList({
           </div>
           
           <div className="flex gap-4">
-            <div className="flex flex-col items-center justify-center">
+            <div className={`flex flex-col items-center justify-center ${isZenMode ? 'md:hidden' : ''}`}>
               {isPerfectDay ? (
                 <div aria-live="polite" className="text-xs md:text-sm font-medium text-pink-400 flex items-center gap-1 mb-1.5 transition-all duration-500">
                   Perfect Day 🌸
@@ -222,7 +228,9 @@ export function DailyTaskList({
             {onToggleZenMode && (
               <button 
                 onClick={onToggleZenMode}
-                className="opacity-100 md:opacity-0 md:group-hover/zen:opacity-100 p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100"
+                className={`p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100 ${
+                  isZenMode ? 'md:hidden opacity-100' : 'opacity-100 md:opacity-0 md:group-hover/zen:opacity-100'
+                }`}
                 title={isZenMode ? "Exit Focus Mode (F)" : "Focus Mode (F)"}
               >
                 {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
@@ -233,13 +241,15 @@ export function DailyTaskList({
 
         {/* Zen Mode Pomodoro Timer */}
         {isZenMode && (
-          <div className="static md:fixed md:top-8 md:right-8 md:z-50 flex flex-col md:items-end gap-3 md:gap-2 group w-full md:w-auto mt-6 md:mt-0 bg-pink-50/50 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none">
+          <div className="static md:absolute md:top-6 md:right-6 md:z-20 flex flex-col md:items-end gap-3 md:gap-1.5 group w-full md:w-auto mt-6 md:mt-0 bg-pink-50/50 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none">
             
             <div className="flex flex-col sm:flex-row md:flex-row items-center gap-3 md:opacity-80 md:group-hover:opacity-100 transition-opacity justify-between md:justify-end w-full md:w-auto">
               <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:translate-x-4 md:group-hover:translate-x-0 w-full sm:w-auto justify-center">
                 <button 
                   onClick={() => {
-                    if(setTimeLeft && setInitialTime) {
+                    if (onAdjustTimer) {
+                      onAdjustTimer(-5 * 60);
+                    } else if (setTimeLeft && setInitialTime) {
                       setTimeLeft(prev => Math.max(0, prev - 5 * 60));
                       setInitialTime(prev => Math.max(0, prev - 5 * 60));
                     }
@@ -251,7 +261,9 @@ export function DailyTaskList({
                 </button>
                 <button 
                   onClick={() => {
-                    if(setTimeLeft && setInitialTime) {
+                    if (onAdjustTimer) {
+                      onAdjustTimer(5 * 60);
+                    } else if (setTimeLeft && setInitialTime) {
                       setTimeLeft(prev => prev + 5 * 60);
                       setInitialTime(prev => prev + 5 * 60);
                     }
@@ -265,7 +277,13 @@ export function DailyTaskList({
                 <div className="w-px h-6 md:h-4 bg-pink-200 md:bg-pink-100 mx-1"></div>
                 
                 <button 
-                  onClick={() => setIsTimerRunning && setIsTimerRunning(!isTimerRunning)}
+                  onClick={() => {
+                    if (onToggleTimer) {
+                      onToggleTimer();
+                    } else if (setIsTimerRunning) {
+                      setIsTimerRunning(!isTimerRunning);
+                    }
+                  }}
                   className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                   title={isTimerRunning ? "Pause" : "Play"}
                 >
@@ -273,7 +291,9 @@ export function DailyTaskList({
                 </button>
                 <button 
                   onClick={() => {
-                    if(setTimeLeft && initialTime !== undefined && setIsTimerRunning) {
+                    if (onResetTimer) {
+                      onResetTimer();
+                    } else if (setTimeLeft && initialTime !== undefined && setIsTimerRunning) {
                       setTimeLeft(initialTime);
                       setIsTimerRunning(false);
                     }
@@ -285,8 +305,19 @@ export function DailyTaskList({
                 </button>
               </div>
               
-              <div className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right">
-                {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
+              <div className="flex items-center gap-1">
+                <div className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right">
+                  {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
+                </div>
+                {onToggleZenMode && (
+                  <button 
+                    onClick={onToggleZenMode}
+                    className="hidden md:flex p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-100/50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+                    title="Exit Focus Mode (F)"
+                  >
+                    <Minimize2 size={16} />
+                  </button>
+                )}
               </div>
             </div>
 

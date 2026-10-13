@@ -15,9 +15,41 @@ export function useLists() {
     }
   });
 
+  // Save to local storage whenever lists change, avoiding redundant writes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
+    const currentStored = localStorage.getItem(STORAGE_KEY);
+    const newSerialized = JSON.stringify(lists);
+    if (currentStored !== newSerialized) {
+      localStorage.setItem(STORAGE_KEY, newSerialized);
+    }
   }, [lists]);
+
+  // Cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY || e.key === null) {
+        try {
+          if (e.key === null) {
+            setLists([]);
+            return;
+          }
+          if (e.newValue) {
+            const parsed = JSON.parse(e.newValue);
+            if (Array.isArray(parsed)) {
+              setLists(parsed);
+            }
+          } else {
+            setLists([]);
+          }
+        } catch (err) {
+          console.error("Failed to sync lists from storage event", err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const addList = useCallback((title: string) => {
     const newList: CustomList = {
@@ -73,6 +105,7 @@ export function useLists() {
   const importLists = useCallback((importedData: any) => {
     if (Array.isArray(importedData)) {
       setLists(importedData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData));
       return true;
     }
     return false;

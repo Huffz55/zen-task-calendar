@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Calendar } from './components/Calendar';
 import { DailyTaskList } from './components/DailyTaskList';
 import { CustomLists } from './components/CustomLists';
@@ -8,13 +8,22 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, Play, Pause, RotateCcw, Plus, Minus } from 'lucide-react';
+import { Download, Upload, Play, Pause, RotateCcw, Plus, Minus, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { playZenChime, initAudioContext } from './utils/audio';
+
+interface AppToast {
+  type?: 'success' | 'info' | 'error' | 'undo';
+  title?: string;
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  timeoutId?: NodeJS.Timeout;
+}
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isZenMode, setIsZenMode] = useState(false);
-  const [toast, setToast] = useState<{ task: Task, timeoutId: NodeJS.Timeout } | null>(null);
+  const [notification, setNotification] = useState<AppToast | null>(null);
   const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
   const [showOfflineReady, setShowOfflineReady] = useState(false);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -54,44 +63,169 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            playZenChime();
-            setIsTimerRunning(false);
-            if (interval) clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning]);
+  const endTimeRef = React.useRef<number | null>(null);
+  const timeLeftMsRef = React.useRef<number | null>(null);
 
-  // When entering Zen mode, auto-start if not running and has time left,
-  // but only if we are starting fresh? Actually, let's just let the user start it or auto-start when they press F.
-  // The user says "when 'F' is pressed again, it resumes exactly from where it left off."
-  React.useEffect(() => {
-    if (isZenMode && timeLeft === initialTime) {
-      setIsTimerRunning(true);
-    } else if (!isZenMode && isTimerRunning) {
-      // Keep it running in the background, or pause? "pause (or keep running in the background)"
-      // Let's keep it running.
+  const handleStartTimer = () => {
+    const remainingMs = timeLeftMsRef.current ?? (timeLeft <= 0 ? initialTime * 1000 : timeLeft * 1000);
+    endTimeRef.current = Date.now() + remainingMs;
+    timeLeftMsRef.current = null;
+    setIsTimerRunning(true);
+  };
+
+  const handlePauseTimer = () => {
+    if (endTimeRef.current !== null) {
+      const remainingMs = Math.max(0, endTimeRef.current - Date.now());
+      timeLeftMsRef.current = remainingMs;
+      setTimeLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
     }
-  }, [isZenMode]);
+    endTimeRef.current = null;
+    setIsTimerRunning(false);
+  };
+
+  const handleToggleTimer = () => {
+    if (isTimerRunning) {
+      handlePauseTimer();
+    } else {
+      handleStartTimer();
+    }
+  };
+
+  const handleResetTimer = () => {
+    endTimeRef.current = null;
+    timeLeftMsRef.current = null;
+    setIsTimerRunning(false);
+    setTimeLeft(initialTime);
+  };
+
+  const handleAdjustTime = (deltaSeconds: number) => {
+    const newInitial = Math.max(0, initialTime + deltaSeconds);
+    setInitialTime(newInitial);
+
+    if (isTimerRunning) {
+      const currentEnd = endTimeRef.current ?? (Date.now() + (timeLeftMsRef.current ?? timeLeft * 1000));
+      const newEnd = Math.max(Date.now(), currentEnd + deltaSeconds * 1000);
+      endTimeRef.current = newEnd;
+      timeLeftMsRef.current = null;
+      const remainingMs = Math.max(0, newEnd - Date.now());
+      const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+      setTimeLeft(remainingSecs);
+
+      if (remainingMs <= 0) {
+        playZenChime();
+        setIsTimerRunning(false);
+        endTimeRef.current = null;
+      }
+    } else {
+      timeLeftMsRef.current = null;
+      setTimeLeft(prev => Math.max(0, prev + deltaSeconds));
+    }
+  };
 
   const handleTimerChange = (minutes: number) => {
     const newTime = minutes * 60;
+    endTimeRef.current = null;
+    timeLeftMsRef.current = null;
+    setIsTimerRunning(false);
     setTimeLeft(newTime);
     setInitialTime(newTime);
-    setIsTimerRunning(false);
   };
+
+  React.useEffect(() => {
+    if (!isTimerRunning) return;
+
+    if (endTimeRef.current === null) {
+      const remainingMs = timeLeftMsRef.current ?? (timeLeft <= 0 ? initialTime * 1000 : timeLeft * 1000);
+      endTimeRef.current = Date.now() + remainingMs;
+      timeLeftMsRef.current = null;
+    }
+
+    const tick = () => {
+      if (endTimeRef.current === null) return;
+      const remainingMs = Math.max(0, endTimeRef.current - Date.now());
+      const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+
+      setTimeLeft(remainingSecs);
+
+      if (remainingMs <= 0) {
+        playZenChime();
+        setIsTimerRunning(false);
+        endTimeRef.current = null;
+        timeLeftMsRef.current = null;
+      }
+    };
+
+    tick();
+
+    const interval = setInterval(tick, 500);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        tick();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
+  }, [isTimerRunning]);
+
+  React.useEffect(() => {
+    if (isZenMode && timeLeft === initialTime && !isTimerRunning) {
+      handleStartTimer();
+    }
+  }, [isZenMode]);
+
+  // Screen Wake Lock API to prevent mobile sleep while timer is running
+  React.useEffect(() => {
+    let wakeLockSentinel: any = null;
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+          wakeLockSentinel = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.warn('Wake Lock request failed:', err);
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      if (wakeLockSentinel) {
+        try {
+          await wakeLockSentinel.release();
+        } catch (err) {
+          console.warn('Wake Lock release failed:', err);
+        } finally {
+          wakeLockSentinel = null;
+        }
+      }
+    };
+
+    if (isTimerRunning) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isTimerRunning) {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      releaseWakeLock();
+    };
+  }, [isTimerRunning]);
 
   const handleSelectDate = (date: Date) => {
     if (date > selectedDate) setSlideAnim('left');
@@ -142,13 +276,46 @@ function App() {
     return streak;
   }, [tasks, getTasksForDate]);
 
+  const showToast = useCallback((toastData: {
+    type?: 'success' | 'info' | 'error' | 'undo';
+    title?: string;
+    message: string;
+    actionLabel?: string;
+    onAction?: () => void;
+    duration?: number;
+  }) => {
+    setNotification(prev => {
+      if (prev?.timeoutId) clearTimeout(prev.timeoutId);
+      return null;
+    });
+
+    const duration = toastData.duration ?? 3500;
+    const timeoutId = setTimeout(() => {
+      setNotification(null);
+    }, duration);
+
+    setNotification({
+      type: toastData.type || 'success',
+      title: toastData.title,
+      message: toastData.message,
+      actionLabel: toastData.actionLabel,
+      onAction: toastData.onAction,
+      timeoutId,
+    });
+  }, []);
+
   const handleDeleteTask = (taskId: string) => {
     const taskToDelete = tasks.find(t => t.id === taskId);
     if (taskToDelete) {
       deleteTask(taskId);
-      if (toast?.timeoutId) clearTimeout(toast.timeoutId);
-      const timeoutId = setTimeout(() => setToast(null), 5000);
-      setToast({ task: taskToDelete, timeoutId });
+      showToast({
+        type: 'undo',
+        title: 'Task deleted',
+        message: `"${taskToDelete.title}" removed`,
+        actionLabel: 'Geri Al',
+        onAction: () => restoreTask(taskToDelete),
+        duration: 5000,
+      });
     }
   };
 
@@ -156,9 +323,14 @@ function App() {
     const taskToModify = tasks.find(t => t.id === taskId);
     if (taskToModify) {
       deleteTaskInstance(taskId, dateStr);
-      if (toast?.timeoutId) clearTimeout(toast.timeoutId);
-      const timeoutId = setTimeout(() => setToast(null), 5000);
-      setToast({ task: taskToModify, timeoutId });
+      showToast({
+        type: 'undo',
+        title: 'Day removed',
+        message: `"${taskToModify.title}" skipped for this date`,
+        actionLabel: 'Geri Al',
+        onAction: () => restoreTask(taskToModify),
+        duration: 5000,
+      });
     }
   };
 
@@ -166,17 +338,14 @@ function App() {
     const taskToModify = tasks.find(t => t.id === taskId);
     if (taskToModify) {
       deleteTaskFuture(taskId, dateStr);
-      if (toast?.timeoutId) clearTimeout(toast.timeoutId);
-      const timeoutId = setTimeout(() => setToast(null), 5000);
-      setToast({ task: taskToModify, timeoutId });
-    }
-  };
-
-  const handleUndoDelete = () => {
-    if (toast) {
-      restoreTask(toast.task);
-      clearTimeout(toast.timeoutId);
-      setToast(null);
+      showToast({
+        type: 'undo',
+        title: 'Future tasks deleted',
+        message: `"${taskToModify.title}" ended from this date`,
+        actionLabel: 'Geri Al',
+        onAction: () => restoreTask(taskToModify),
+        duration: 5000,
+      });
     }
   };
 
@@ -186,9 +355,16 @@ function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `noteapp-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    link.download = 'zen-tasks-backup.json';
     link.click();
     URL.revokeObjectURL(url);
+    showToast({
+      type: 'success',
+      title: 'Exported!',
+      message: 'Backup saved to zen-tasks-backup.json 🌸',
+      actionLabel: 'Tamam',
+      duration: 3500,
+    });
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,7 +384,7 @@ function App() {
           // Legacy backup format (only tasks array)
           successTasks = importTasks(parsed);
         } else if (parsed && typeof parsed === 'object') {
-          // New backup format
+          // Combined backup format
           if (Array.isArray(parsed.tasks)) {
             successTasks = importTasks(parsed.tasks);
           }
@@ -218,12 +394,30 @@ function App() {
         }
         
         if (successTasks || successLists) {
-          alert('Backup restored successfully! 🌸');
+          showToast({
+            type: 'success',
+            title: 'Success!',
+            message: 'Backup restored successfully! 🌸',
+            actionLabel: 'Tamam',
+            duration: 4000,
+          });
         } else {
-          alert('Invalid backup file format.');
+          showToast({
+            type: 'error',
+            title: 'Import Error',
+            message: 'Invalid backup file format.',
+            actionLabel: 'Tamam',
+            duration: 4000,
+          });
         }
       } catch (err) {
-        alert('Error reading the backup file.');
+        showToast({
+          type: 'error',
+          title: 'Import Error',
+          message: 'Error reading the backup file.',
+          actionLabel: 'Tamam',
+          duration: 4000,
+        });
       }
     };
     reader.readAsText(file);
@@ -406,6 +600,9 @@ function App() {
                 isTimerRunning={isTimerRunning}
                 setIsTimerRunning={setIsTimerRunning}
                 handleTimerChange={handleTimerChange}
+                onToggleTimer={handleToggleTimer}
+                onResetTimer={handleResetTimer}
+                onAdjustTimer={handleAdjustTime}
               />
             </div>
           </div>
@@ -465,19 +662,65 @@ function App() {
         </div>
       )}
 
-      {/* Undo Toast */}
-      {toast && (
+      {/* Custom In-App Notification Toast */}
+      {notification && (
         <div
+          role="status"
           aria-live="polite"
-          className="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 bg-pink-50 border border-pink-100 px-6 py-3 rounded-full shadow-md flex items-center gap-4 animate-slide-up-fade z-50"
+          className="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 md:left-auto md:right-8 md:translate-x-0 bg-pink-50/95 backdrop-blur-md rounded-2xl border border-pink-100 p-4 shadow-xl shadow-pink-500/5 flex items-center gap-3.5 z-[100] max-w-[92vw] sm:max-w-md animate-slide-up-fade"
         >
-          <span className="font-medium text-pink-400 text-sm">Task deleted</span>
-          <button
-            onClick={handleUndoDelete}
-            className="font-bold text-pink-500 hover:text-pink-600 transition-colors text-sm underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none rounded"
-          >
-            Undo
-          </button>
+          <div className="w-10 h-10 rounded-xl bg-pink-100/80 flex items-center justify-center shrink-0 text-pink-500 shadow-sm">
+            {notification.type === 'error' ? (
+              <AlertCircle size={20} />
+            ) : notification.type === 'undo' ? (
+              <RotateCcw size={18} />
+            ) : (
+              <CheckCircle2 size={20} />
+            )}
+          </div>
+
+          <div className="flex flex-col min-w-0 pr-1 flex-1">
+            {notification.title && (
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-pink-400">
+                {notification.title}
+              </span>
+            )}
+            <span className="text-sm font-medium text-pink-800 break-words">
+              {notification.message}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {notification.actionLabel && (
+              <button
+                onClick={() => {
+                  if (notification.onAction) {
+                    notification.onAction();
+                  }
+                  if (notification.timeoutId) {
+                    clearTimeout(notification.timeoutId);
+                  }
+                  setNotification(null);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold bg-white hover:bg-pink-100/80 text-pink-600 rounded-xl shadow-sm border border-pink-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+              >
+                {notification.actionLabel}
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                if (notification.timeoutId) {
+                  clearTimeout(notification.timeoutId);
+                }
+                setNotification(null);
+              }}
+              className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-100/60 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
+              title="Dismiss"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>

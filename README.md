@@ -1,48 +1,126 @@
-# NoteApp 🌸
-**Serverless, minimalist task & calendar management designed for peace of mind.**
+<div align="center">
 
-NoteApp is an ultra-lightweight, visually serene productivity tool built with React and Tailwind CSS v4. It intentionally avoids the visual clutter and overstimulation of heavy platforms (like Notion) by enforcing a strict white and soft-pink aesthetic. It lives entirely in your browser, keeping your data perfectly private.
+# Zen Task Calendar 🌸
 
-## ✨ Features
+**Serverless, local-first task & calendar management engineered for mindful productivity.**
 
-- **Serverless Architecture**: 100% offline-ready PWA. Your data is saved securely in your browser's `localStorage`. No accounts, no servers, no tracking.
-- **Micro-Interactions**: Experience deeply satisfying usage with organic Web Audio 'pop' sounds, haptic feedback on mobile, and buttery smooth CSS transition animations.
-- **Focus / Zen Mode**: Press `F` to instantly collapse the calendar sidebar and center your tasks for a completely distraction-free experience.
-- **Perfect Days & Streaks**: Complete all your tasks to trigger a soft petal celebration and build up your daily streak counter.
-- **Recurring Tasks**: Easily set tasks to repeat Daily, Weekly, or Bi-weekly using a custom, beautifully styled dropdown.
-- **Smart Linkification**: URLs typed into tasks are automatically converted into clickable links without breaking the UI.
-- **Data Portability**: Export your tasks as cleanly formatted `.txt` files for safekeeping, and import them at any time.
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-zen--task--calendar.vercel.app-f472b6?style=for-the-badge&logo=vercel&logoColor=white)](https://zen-task-calendar.vercel.app/)
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel" />
+  <img src="https://img.shields.io/badge/PWA-Ready-f472b6?style=flat-square&logo=pwa&logoColor=white" alt="PWA Ready" />
+</p>
+
+</div>
+
+---
+
+## 📖 Project Overview
+
+**Zen Task Calendar** is an offline-ready, mobile-first Progressive Web App (PWA) designed to eliminate cognitive overload. Built with a pure local-first philosophy, it merges a fluid calendar, recurring task management, and a dedicated Pomodoro-style "Zen Mode" timer into a warm, pastel-tinted interface. 
+
+With zero backend dependencies, zero telemetry, and zero mandatory accounts, your daily schedule remains 100% private, snappy, and reliable—even without an internet connection.
+
+---
+
+## ✨ Killer Features
+
+- 📱 **Mobile-First & PWA:** Installable directly to Android (via WebAPK/TWA) and iOS home screens. Powered by Workbox service workers for instantaneous loading and 100% offline autonomy.
+- 🔄 **Cross-Tab Synchronization:** Seamless real-time state synchronization across concurrent browser tabs using active `window.storage` event propagation.
+- 🧘 **Zen Mode:** A dedicated focus timer powered by the **Screen Wake Lock API** (preventing mobile devices from sleeping mid-session), absolute timestamp drift compensation (`Date.now()`), and custom **Web Audio API** synthesized chimes.
+- 💾 **Local-First & Backup:** Zero-latency persistence with `localStorage`, single-click two-way JSON backup (`zen-tasks-backup.json`) bundling tasks and checklists, plus automated 30-day garbage collection for completed tasks.
+- 🔁 **Flexible Recurring Tasks:** Native support for Daily, Weekly, and Bi-weekly recurrence schedules, with granular single-day exclusions (`excludedDates`) and future truncations (`endDate`).
+- 🎨 **Mindful Micro-Interactions:** Synthesized pop sounds, celebratory confetti for completed days, dynamic ambient theme tints adjusting to the hour of the day, and smooth spring animations.
+
+---
+
+## 🏗️ Technical Architecture (For Recruiters & Engineers)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Client Layer (React 19)                │
+│   ┌───────────────┐   ┌─────────────────┐   ┌───────────┐   │
+│   │   Calendar    │   │  DailyTaskList  │   │CustomLists│   │
+│   └───────┬───────┘   └────────┬────────┘   └─────┬─────┘   │
+└───────────┼────────────────────┼──────────────────┼─────────┘
+            ▼                    ▼                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 State & Business Logic Layer                │
+│    useTasks (Recurrence Engine, GC) │ useLists (Checklists) │
+│    Absolute Timestamp Timer Engine  │ Screen Wake Lock API  │
+└──────────────────────────────┬──────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Storage & Sync Architecture                 │
+│      LocalStorage (v1 Keys) ◄──► window.storage Listener    │
+│      Workbox Service Worker Precache (vite-plugin-pwa)      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Architectural Decisions
+
+1. **Why Local-First & LocalStorage?**
+   - By eliminating external database round-trips, UI interactions execute at 0ms latency.
+   - User privacy is mathematically absolute: personal schedules and thoughts never leave the client device.
+   - Storage quotas are actively protected by an automated garbage collection engine that cleans up completed non-recurring records older than 30 days during hook initialization.
+
+2. **Custom Recurrence Engine (`useTasks`):**
+   - Tasks are stored as normalized parent definitions with frequency algorithms rather than bloated infinite database rows.
+   - Single-instance skipping (`deleteTaskInstance`) records ISO dates in an `excludedDates` array, while ending a recurring series (`deleteTaskFuture`) computes and stamps an `endDate`, preserving historical accomplishment logs intact.
+
+3. **Background Tab Drift-Free Timer:**
+   - Instead of naive `setInterval` countdown decrements (which modern mobile browsers aggressively throttle down to 1 tick per minute), the timer stores an absolute target timestamp (`endTime = Date.now() + remainingMs`).
+   - Every interval tick and `visibilitychange` event calculates exact remaining time relative to the hardware system clock, providing millisecond-perfect accuracy upon returning to the tab.
+
+4. **Service Worker & Production PWA:**
+   - Configured through `vite-plugin-pwa` with `generateSW` and `autoUpdate` registration.
+   - Manifest includes high-resolution maskable PNG icon definitions, standalone portrait display properties, and productivity category flags to achieve top PWABuilder evaluation scores.
+
+---
 
 ## ⌨️ Global Shortcuts
 
-Maximize your flow with invisible, screen-reader-friendly global hotkeys:
-- `N` - Instantly focus the "Add a new task" input.
-- `F` - Toggle Focus/Zen mode on and off.
-- `T` - Snap the calendar back to "Today".
+Boost your daily flow with frictionless keyboard triggers:
+- `N` — Instantly focus the "Add a new task" input
+- `F` — Toggle Zen / Pomodoro Focus Mode
+- `T` — Jump calendar selection immediately back to Today
 
-## 🛠️ Tech Stack
+---
 
-- **Framework**: React 19 + Vite
-- **Styling**: Tailwind CSS v4 (Custom `@theme` animations)
-- **Icons**: Lucide React
-- **Dates**: `date-fns`
-- **PWA**: `vite-plugin-pwa`
+## 🚀 Installation & Setup
 
-## 🚀 Getting Started
+Ensure you have **Node.js 18+** installed on your system.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/noteapp.git
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+```bash
+# 1. Clone repository
+git clone https://github.com/yourusername/zen-task-calendar.git
 
-## 🎨 Design Philosophy
-*"Take a deep breath and start."*
-This app was meticulously crafted to reduce cognitive load. You will find absolutely zero native browser outlines, zero dark-mode jarring contrasts, and zero unnecessary popups. Everything from the breathing empty state to the dynamic time-of-day greetings exists to create a calm, reliable, and premium user experience.
+# 2. Navigate to project root
+cd zen-task-calendar
+
+# 3. Install dependencies
+npm install
+
+# 4. Start local development server
+npm run dev
+```
+
+Build for production:
+```bash
+npm run build
+```
+
+Preview production build:
+```bash
+npm run preview
+```
+
+---
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](LICENSE).

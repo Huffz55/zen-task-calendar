@@ -5,21 +5,88 @@ import { differenceInDays, parseISO, isValid } from 'date-fns';
 
 const STORAGE_KEY = 'noteapp_tasks_v1';
 
+function cleanupOldCompletedTasks(rawTasks: Task[]): { cleaned: Task[]; removedCount: number } {
+  const now = new Date();
+  const cleaned = rawTasks.filter(task => {
+    // Only target non-recurring tasks
+    const isNonRecurring = !task.recurrence || task.recurrence === 'none';
+    if (!isNonRecurring) return true; // Keep recurring tasks
+
+    // Check if task is completed
+    const isCompleted = Array.isArray(task.completedDates) && (
+      task.completedDates.includes(task.date) || task.completedDates.length > 0
+    );
+    if (!isCompleted) return true; // Keep incomplete tasks
+
+    // Check if task date is older than 30 days
+    const taskDate = parseISO(task.date);
+    if (!isValid(taskDate)) return true; // Keep if invalid to avoid data loss
+
+    const isOlderThan30Days = differenceInDays(now, taskDate) > 30;
+    return !isOlderThan30Days;
+  });
+
+  return {
+    cleaned,
+    removedCount: rawTasks.length - cleaned.length
+  };
+}
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      const parsed: Task[] = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const { cleaned, removedCount } = cleanupOldCompletedTasks(parsed);
+        if (removedCount > 0) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+          return cleaned;
+        }
+        return parsed;
+      }
+      return parsed;
     } catch (e) {
       console.error("Failed to parse tasks from localStorage", e);
       return [];
     }
   });
 
-  // Save to local storage whenever tasks change
+  // Save to local storage whenever tasks change, avoiding redundant writes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    const currentStored = localStorage.getItem(STORAGE_KEY);
+    const newSerialized = JSON.stringify(tasks);
+    if (currentStored !== newSerialized) {
+      localStorage.setItem(STORAGE_KEY, newSerialized);
+    }
   }, [tasks]);
+
+  // Cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY || e.key === null) {
+        try {
+          if (e.key === null) {
+            setTasks([]);
+            return;
+          }
+          if (e.newValue) {
+            const parsed = JSON.parse(e.newValue);
+            if (Array.isArray(parsed)) {
+              setTasks(parsed);
+            }
+          } else {
+            setTasks([]);
+          }
+        } catch (err) {
+          console.error("Failed to sync tasks from storage event", err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const addTask = useCallback((title: string, date: string, recurrence: RecurrenceType) => {
     const newTask: Task = {
@@ -127,6 +194,7 @@ export function useTasks() {
     // Basic validation to ensure it looks like an array of tasks
     if (Array.isArray(importedTasks) && importedTasks.every(t => t.id && t.title)) {
       setTasks(importedTasks);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedTasks));
       return true;
     }
     return false;
