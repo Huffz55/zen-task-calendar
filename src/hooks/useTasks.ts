@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Task, RecurrenceType } from '../types';
+import type { Task, RecurrenceType, TaskTag } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { differenceInDays, parseISO, isValid } from 'date-fns';
+import { differenceInDays, parseISO, isValid, subDays, format } from 'date-fns';
+import { validateTask } from '../utils/validation';
 
-const STORAGE_KEY = 'noteapp_tasks_v1';
+import { defaultTaskStorage, TASKS_STORAGE_KEY } from '../services/storage/taskStorage';
+import type { ITaskStorage } from '../services/storage/taskStorage';
 
 function cleanupOldCompletedTasks(rawTasks: Task[]): { cleaned: Task[]; removedCount: number } {
   const now = new Date();
@@ -32,48 +34,40 @@ function cleanupOldCompletedTasks(rawTasks: Task[]): { cleaned: Task[]; removedC
   };
 }
 
-export function useTasks() {
+export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const parsed: Task[] = stored ? JSON.parse(stored) : [];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const { cleaned, removedCount } = cleanupOldCompletedTasks(parsed);
-        if (removedCount > 0) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
-          return cleaned;
-        }
-        return parsed;
-      }
-      return parsed;
-    } catch (e) {
-      console.error("Failed to parse tasks from localStorage", e);
-      return [];
+    const loaded = storage.loadTasks();
+    const { cleaned, removedCount } = cleanupOldCompletedTasks(loaded);
+    if (removedCount > 0) {
+      storage.saveTasks(cleaned);
+      return cleaned;
     }
+    return loaded;
   });
 
-  // Save to local storage whenever tasks change, avoiding redundant writes
+  // Save to storage repository whenever tasks change
   useEffect(() => {
-    const currentStored = localStorage.getItem(STORAGE_KEY);
-    const newSerialized = JSON.stringify(tasks);
-    if (currentStored !== newSerialized) {
-      localStorage.setItem(STORAGE_KEY, newSerialized);
-    }
-  }, [tasks]);
+    storage.saveTasks(tasks);
+  }, [tasks, storage]);
 
   // Cross-tab synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY || e.key === null) {
+      if (e.key === TASKS_STORAGE_KEY || e.key === null) {
         try {
           if (e.key === null) {
             setTasks([]);
             return;
           }
           if (e.newValue) {
-            const parsed = JSON.parse(e.newValue);
-            if (Array.isArray(parsed)) {
-              setTasks(parsed);
+            const raw = JSON.parse(e.newValue);
+            if (Array.isArray(raw)) {
+              const validated: Task[] = [];
+              for (const item of raw) {
+                const v = validateTask(item);
+                if (v) validated.push(v);
+              }
+              setTasks(validated);
             }
           } else {
             setTasks([]);
@@ -88,12 +82,13 @@ export function useTasks() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const addTask = useCallback((title: string, date: string, recurrence: RecurrenceType) => {
+  const addTask = useCallback((title: string, date: string, recurrence: RecurrenceType, tag?: TaskTag) => {
     const newTask: Task = {
       id: uuidv4(),
       title,
       date, // this acts as the start date
       recurrence,
+      tag,
       completedDates: [],
     };
     setTasks(prev => [...prev, newTask]);
@@ -118,11 +113,10 @@ export function useTasks() {
   const deleteTaskFuture = useCallback((taskId: string, dateStr: string) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
-        // Find the day before dateStr
-        const targetDate = new Date(dateStr);
-        targetDate.setDate(targetDate.getDate() - 1);
-        // Format to YYYY-MM-DD
-        const prevDayStr = targetDate.toISOString().split('T')[0];
+        const targetDate = parseISO(dateStr);
+        if (!isValid(targetDate)) return task;
+        // Find the day before dateStr using date-fns for timezone-safe calendar calculation
+        const prevDayStr = format(subDays(targetDate, 1), 'yyyy-MM-dd');
         
         return {
           ...task,
@@ -136,8 +130,9 @@ export function useTasks() {
   const toggleTaskCompletion = useCallback((taskId: string, dateStr: string) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
-        const isCompleted = task.completedDates.includes(dateStr);
-        let newCompletedDates = [...task.completedDates];
+        const completedList = Array.isArray(task.completedDates) ? task.completedDates : [];
+        const isCompleted = completedList.includes(dateStr);
+        let newCompletedDates = [...completedList];
         
         if (isCompleted) {
           newCompletedDates = newCompletedDates.filter(d => d !== dateStr);
@@ -185,20 +180,25 @@ export function useTasks() {
       id: `${task.id}-${dateStr}`,
       taskId: task.id,
       title: task.title,
-      isCompleted: task.completedDates.includes(dateStr),
+      isCompleted: (Array.isArray(task.completedDates) ? task.completedDates : []).includes(dateStr),
       recurrence: task.recurrence,
+      tag: task.tag,
     }));
   }, [tasks]);
 
-  const importTasks = useCallback((importedTasks: Task[]) => {
-    // Basic validation to ensure it looks like an array of tasks
-    if (Array.isArray(importedTasks) && importedTasks.every(t => t.id && t.title)) {
-      setTasks(importedTasks);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedTasks));
-      return true;
+  const importTasks = useCallback((importedTasks: unknown) => {
+    if (!Array.isArray(importedTasks)) return false;
+    const validated: Task[] = [];
+    for (const item of importedTasks) {
+      const v = validateTask(item);
+      if (v) validated.push(v);
     }
-    return false;
-  }, []);
+    if (validated.length === 0 && importedTasks.length > 0) return false;
+
+    setTasks(validated);
+    storage.saveTasks(validated);
+    return true;
+  }, [storage]);
 
   const editTask = useCallback((taskId: string, newTitle: string) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title: newTitle } : t));
@@ -240,6 +240,34 @@ export function useTasks() {
     }));
   }, []);
 
+  const rolloverOverdueTasks = useCallback((targetDateStr: string) => {
+    let count = 0;
+    setTasks(prev => prev.map(task => {
+      const isNonRecurring = !task.recurrence || task.recurrence === 'none';
+      const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
+      const isOverdue = task.date < targetDateStr;
+
+      if (isNonRecurring && !isCompleted && isOverdue) {
+        count++;
+        return {
+          ...task,
+          date: targetDateStr,
+        };
+      }
+      return task;
+    }));
+    return count;
+  }, []);
+
+  const getOverdueTasksCount = useCallback((todayStr: string) => {
+    return tasks.filter(task => {
+      const isNonRecurring = !task.recurrence || task.recurrence === 'none';
+      const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
+      const isOverdue = task.date < todayStr;
+      return isNonRecurring && !isCompleted && isOverdue;
+    }).length;
+  }, [tasks]);
+
   return {
     tasks,
     addTask,
@@ -253,5 +281,7 @@ export function useTasks() {
     editTask,
     reorderTasks,
     rescheduleTask,
+    rolloverOverdueTasks,
+    getOverdueTasksCount,
   };
 }

@@ -1,42 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { CustomList, ListItem } from '../types';
+import { validateCustomList } from '../utils/validation';
+import { defaultListStorage, LISTS_STORAGE_KEY } from '../services/storage/taskStorage';
+import type { IListStorage } from '../services/storage/taskStorage';
 
-const STORAGE_KEY = 'noteapp_lists_v1';
-
-export function useLists() {
+export function useLists(storage: IListStorage = defaultListStorage) {
   const [lists, setLists] = useState<CustomList[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      console.error("Failed to parse lists from localStorage", e);
-      return [];
-    }
+    return storage.loadLists();
   });
 
-  // Save to local storage whenever lists change, avoiding redundant writes
+  // Save to storage repository whenever lists change
   useEffect(() => {
-    const currentStored = localStorage.getItem(STORAGE_KEY);
-    const newSerialized = JSON.stringify(lists);
-    if (currentStored !== newSerialized) {
-      localStorage.setItem(STORAGE_KEY, newSerialized);
-    }
-  }, [lists]);
+    storage.saveLists(lists);
+  }, [lists, storage]);
 
   // Cross-tab synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY || e.key === null) {
+      if (e.key === LISTS_STORAGE_KEY || e.key === null) {
         try {
           if (e.key === null) {
             setLists([]);
             return;
           }
           if (e.newValue) {
-            const parsed = JSON.parse(e.newValue);
-            if (Array.isArray(parsed)) {
-              setLists(parsed);
+            const raw = JSON.parse(e.newValue);
+            if (Array.isArray(raw)) {
+              const validated: CustomList[] = [];
+              for (const item of raw) {
+                const v = validateCustomList(item);
+                if (v) validated.push(v);
+              }
+              setLists(validated);
             }
           } else {
             setLists([]);
@@ -64,12 +60,22 @@ export function useLists() {
     setLists(prev => prev.filter(list => list.id !== id));
   }, []);
 
+  const restoreList = useCallback((list: CustomList) => {
+    setLists(prev => {
+      const exists = prev.some(l => l.id === list.id);
+      if (exists) {
+        return prev.map(l => l.id === list.id ? list : l);
+      }
+      return [list, ...prev];
+    });
+  }, []);
+
   const addListItem = useCallback((listId: string, text: string) => {
     setLists(prev => prev.map(list => {
       if (list.id === listId) {
         return {
           ...list,
-          items: [...list.items, { id: uuidv4(), text, completed: false }]
+          items: [...(list.items || []), { id: uuidv4(), text, completed: false }]
         };
       }
       return list;
@@ -81,7 +87,7 @@ export function useLists() {
       if (list.id === listId) {
         return {
           ...list,
-          items: list.items.filter(item => item.id !== itemId)
+          items: (list.items || []).filter(item => item.id !== itemId)
         };
       }
       return list;
@@ -93,7 +99,7 @@ export function useLists() {
       if (list.id === listId) {
         return {
           ...list,
-          items: list.items.map(item => 
+          items: (list.items || []).map(item => 
             item.id === itemId ? { ...item, completed: !item.completed } : item
           )
         };
@@ -102,19 +108,25 @@ export function useLists() {
     }));
   }, []);
 
-  const importLists = useCallback((importedData: any) => {
-    if (Array.isArray(importedData)) {
-      setLists(importedData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData));
-      return true;
+  const importLists = useCallback((importedData: unknown) => {
+    if (!Array.isArray(importedData)) return false;
+    const validated: CustomList[] = [];
+    for (const item of importedData) {
+      const v = validateCustomList(item);
+      if (v) validated.push(v);
     }
-    return false;
-  }, []);
+    if (validated.length === 0 && importedData.length > 0) return false;
+
+    setLists(validated);
+    storage.saveLists(validated);
+    return true;
+  }, [storage]);
 
   return {
     lists,
     addList,
     deleteList,
+    restoreList,
     addListItem,
     deleteListItem,
     toggleListItem,

@@ -21,9 +21,15 @@ interface CalendarProps {
   onDropTask?: (taskId: string, dateStr: string) => void;
 }
 
-export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate, onDropTask }: CalendarProps) {
+function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, onDropTask }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(startOfMonth(selectedDate));
   const [dragHoverDate, setDragHoverDate] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!isSameMonth(selectedDate, currentMonth)) {
+      setCurrentMonth(startOfMonth(selectedDate));
+    }
+  }, [selectedDate]);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -134,3 +140,12 @@ export function Calendar({ selectedDate, onSelectDate, getTaskCountForDate, onDr
     </div>
   );
 }
+
+export const Calendar = React.memo(CalendarComponent, (prev, next) => {
+  return (
+    prev.selectedDate.getTime() === next.selectedDate.getTime() &&
+    prev.onSelectDate === next.onSelectDate &&
+    prev.getTaskCountForDate === next.getTaskCountForDate &&
+    prev.onDropTask === next.onDropTask
+  );
+});

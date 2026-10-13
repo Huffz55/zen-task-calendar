@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import type { DailyTask, RecurrenceType } from '../types';
-import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2, GripVertical, Play, Pause, RotateCcw, Minus } from 'lucide-react';
+import type { DailyTask, RecurrenceType, TaskTag } from '../types';
+import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2, GripVertical, Play, Pause, RotateCcw, Minus, Pencil } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop } from '../utils/audio';
+import { hapticLight, hapticSuccess, hapticCelebration } from '../utils/haptics';
+import { AmbientSoundControl } from './AmbientSoundControl';
+
+export const TAG_CONFIG: Record<TaskTag, { label: string; icon: string; bgClass: string; textClass: string; borderClass: string }> = {
+  work: { label: 'Work', icon: '💼', bgClass: 'bg-blue-50/90', textClass: 'text-blue-600', borderClass: 'border-blue-100' },
+  personal: { label: 'Personal', icon: '🌿', bgClass: 'bg-emerald-50/90', textClass: 'text-emerald-600', borderClass: 'border-emerald-100' },
+  health: { label: 'Health', icon: '🧘', bgClass: 'bg-amber-50/90', textClass: 'text-amber-600', borderClass: 'border-amber-100' },
+  ideas: { label: 'Idea', icon: '💡', bgClass: 'bg-purple-50/90', textClass: 'text-purple-600', borderClass: 'border-purple-100' },
+  priority: { label: 'Priority', icon: '⭐', bgClass: 'bg-rose-50/90', textClass: 'text-rose-600', borderClass: 'border-rose-100' },
+};
 
 interface DailyTaskListProps {
   selectedDate: Date;
   tasks: DailyTask[];
   onToggleTask: (taskId: string, dateStr: string) => void;
-  onAddTask: (title: string, dateStr: string, recurrence: RecurrenceType) => void;
+  onAddTask: (title: string, dateStr: string, recurrence: RecurrenceType, tag?: TaskTag) => void;
   onDeleteTask: (taskId: string) => void;
   onDeleteTaskInstance?: (taskId: string, dateStr: string) => void;
   onDeleteTaskFuture?: (taskId: string, dateStr: string) => void;
@@ -27,9 +37,11 @@ interface DailyTaskListProps {
   onToggleTimer?: () => void;
   onResetTimer?: () => void;
   onAdjustTimer?: (seconds: number) => void;
+  overdueTasksCount?: number;
+  onRolloverTasks?: () => void;
 }
 
-export function DailyTaskList({ 
+function DailyTaskListComponent({ 
   selectedDate, 
   tasks, 
   onToggleTask, 
@@ -50,13 +62,20 @@ export function DailyTaskList({
   handleTimerChange,
   onToggleTimer,
   onResetTimer,
-  onAdjustTimer
+  onAdjustTimer,
+  overdueTasksCount = 0,
+  onRolloverTasks
 }: DailyTaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
+  const [selectedTag, setSelectedTag] = useState<TaskTag | undefined>(undefined);
+  const [activeTagFilter, setActiveTagFilter] = useState<TaskTag | 'all'>('all');
+  const [isRolloverDismissed, setIsRolloverDismissed] = useState(false);
   const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const isViewingToday = dateStr === todayStr;
 
   // Inline editing state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -71,6 +90,11 @@ export function DailyTaskList({
   const completedTasks = tasks.filter(t => t.isCompleted).length;
   const progressPercent = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
   const isPerfectDay = tasks.length > 0 && completedTasks === tasks.length;
+
+  const availableTags = Array.from(new Set(tasks.map(t => t.tag).filter(Boolean))) as TaskTag[];
+  const displayedTasks = activeTagFilter === 'all' 
+    ? tasks 
+    : tasks.filter(t => t.tag === activeTagFilter);
 
   // Global 'N' Hotkey for Add Task
   useEffect(() => {
@@ -89,9 +113,24 @@ export function DailyTaskList({
   }, []);
 
   const submitTask = () => {
-    if (!newTaskTitle.trim()) return;
-    onAddTask(newTaskTitle.trim(), dateStr, recurrence);
+    const raw = newTaskTitle.trim();
+    if (!raw) return;
+
+    // Smart natural language hashtag detection
+    let finalTitle = raw;
+    let finalTag = selectedTag;
+
+    const tagMatch = raw.match(/#(work|personal|health|ideas?|priority)\b/i);
+    if (tagMatch) {
+      const matched = tagMatch[1].toLowerCase();
+      if (matched === 'idea' || matched === 'ideas') finalTag = 'ideas';
+      else finalTag = matched as TaskTag;
+      finalTitle = raw.replace(tagMatch[0], '').trim();
+    }
+
+    onAddTask(finalTitle || raw, dateStr, recurrence, finalTag);
     setNewTaskTitle('');
+    setSelectedTag(undefined);
     setRecurrence('none');
     setIsAdding(false);
   };
@@ -114,15 +153,20 @@ export function DailyTaskList({
 
       const isLastPending = tasks.filter(t => !t.isCompleted).length === 1;
       if (isLastPending) {
+        hapticCelebration();
         confetti({
-          particleCount: 50,
-          spread: 60,
+          particleCount: 55,
+          spread: 65,
           origin: { y: 0.6 },
-          colors: ['#fdf2f8', '#fbcfe8', '#ffffff'],
+          colors: ['#fdf2f8', '#fbcfe8', '#f472b6', '#ffffff'],
           disableForReducedMotion: false,
           zIndex: 100
         });
+      } else {
+        hapticSuccess();
       }
+    } else {
+      hapticLight();
     }
     onToggleTask(taskId, dateString);
   };
@@ -161,9 +205,7 @@ export function DailyTaskList({
     e.preventDefault();
     if (draggedTaskId && draggedTaskId !== targetTaskId) {
       onReorderTasks(draggedTaskId, targetTaskId);
-      if (typeof window !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(40);
-      }
+      hapticLight();
     }
     setDraggedTaskId(null);
   };
@@ -174,20 +216,33 @@ export function DailyTaskList({
     
     return parts.map((part, i) => {
       if (part.match(urlRegex)) {
-        const href = part.startsWith('http') ? part : `https://${part}`;
-        return (
-          <a
-            key={i}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-pink-400 hover:text-pink-500 hover:underline transition-colors"
-            onClick={(e) => e.stopPropagation()}
-            draggable={false}
-          >
-            {part}
-          </a>
-        );
+        let safeHref = '';
+        try {
+          const rawUrl = part.startsWith('http://') || part.startsWith('https://') ? part : `https://${part}`;
+          const parsed = new URL(rawUrl);
+          // Strictly allow only http: and https: protocols
+          if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            safeHref = parsed.toString();
+          }
+        } catch {
+          safeHref = '';
+        }
+
+        if (safeHref) {
+          return (
+            <a
+              key={i}
+              href={safeHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-pink-400 hover:text-pink-500 hover:underline transition-colors"
+              onClick={(e) => e.stopPropagation()}
+              draggable={false}
+            >
+              {part}
+            </a>
+          );
+        }
       }
       return <span key={i}>{part}</span>;
     });
@@ -207,35 +262,75 @@ export function DailyTaskList({
           </div>
           
           <div className="flex gap-4">
-            <div className={`flex flex-col items-center justify-center ${isZenMode ? 'md:hidden' : ''}`}>
-              {isPerfectDay ? (
-                <div aria-live="polite" className="text-xs md:text-sm font-medium text-pink-400 flex items-center gap-1 mb-1.5 transition-all duration-500">
-                  Perfect Day 🌸
+            <div className={`flex items-center gap-3 ${isZenMode ? 'md:hidden' : ''}`}>
+              <div className="relative w-11 h-11 flex items-center justify-center shrink-0">
+                <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                  {/* Background Track */}
+                  <circle
+                    cx="22"
+                    cy="22"
+                    r="18"
+                    className="stroke-pink-100/70"
+                    strokeWidth="3.5"
+                    fill="none"
+                  />
+                  {/* Progress Fill */}
+                  <circle
+                    cx="22"
+                    cy="22"
+                    r="18"
+                    className="stroke-pink-400 transition-all duration-700 ease-out"
+                    strokeWidth="3.5"
+                    strokeDasharray="113.1"
+                    strokeDashoffset={113.1 - (113.1 * progressPercent) / 100}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {isPerfectDay ? (
+                    <span className="text-xs select-none animate-bounce" title="Perfect Day!">🌸</span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-gray-600">
+                      {tasks.length > 0 ? `${Math.round(progressPercent)}%` : '0%'}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="text-[10px] md:text-xs text-gray-400 mb-1.5 font-medium text-center transition-all duration-500">
-                  {tasks.length > 0 ? `${completedTasks} / ${tasks.length} done` : 'No tasks'}
-                </div>
-              )}
-              <div className="w-20 md:w-24 h-1.5 bg-pink-50 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-pink-300 rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${progressPercent}%` }}
-                />
+              </div>
+
+              <div className="flex flex-col justify-center">
+                {isPerfectDay ? (
+                  <span className="text-xs font-semibold text-pink-500 bg-pink-50/90 px-2 py-0.5 rounded-full border border-pink-100 whitespace-nowrap">
+                    All Done! 🌸
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {tasks.length > 0 ? `${completedTasks} of ${tasks.length}` : 'No tasks'}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {tasks.length > 0 ? 'completed' : 'planned'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             
-            {onToggleZenMode && (
-              <button 
-                onClick={onToggleZenMode}
-                className={`p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100 ${
-                  isZenMode ? 'md:hidden opacity-100' : 'opacity-100 md:opacity-0 md:group-hover/zen:opacity-100'
-                }`}
-                title={isZenMode ? "Exit Focus Mode (F)" : "Focus Mode (F)"}
-              >
-                {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-              </button>
-            )}
+            <div className={`flex items-center gap-2 shrink-0 ${isZenMode ? 'md:hidden' : ''}`}>
+              <AmbientSoundControl />
+              
+              {onToggleZenMode && (
+                <button 
+                  onClick={onToggleZenMode}
+                  className={`p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100 ${
+                    isZenMode ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover/zen:opacity-100'
+                  }`}
+                  title={isZenMode ? "Exit Focus Mode (F)" : "Focus Mode (F)"}
+                >
+                  {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -305,7 +400,10 @@ export function DailyTaskList({
                 </button>
               </div>
               
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <div className="hidden md:flex items-center">
+                  <AmbientSoundControl />
+                </div>
                 <div className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right">
                   {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
                 </div>
@@ -338,25 +436,122 @@ export function DailyTaskList({
       </div>
 
       <div className="flex-1 overflow-visible lg:overflow-y-auto mb-4 pr-0 md:pr-2 min-h-0 relative w-full max-w-full">
+        {/* Overdue Past Tasks Smart Rollover Banner */}
+        {isViewingToday && overdueTasksCount > 0 && !isRolloverDismissed && (
+          <div className="mb-4 p-3.5 sm:p-4 rounded-2xl bg-amber-50/90 border border-amber-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-slide-up-fade">
+            <div className="flex items-center gap-3">
+              <span className="text-xl select-none">⏳</span>
+              <div>
+                <h5 className="text-xs sm:text-sm font-semibold text-amber-900">
+                  {overdueTasksCount} unfinished task{overdueTasksCount > 1 ? 's' : ''} from past days
+                </h5>
+                <p className="text-[11px] text-amber-700/80 mt-0.5">
+                  Would you like to roll them over to today?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onRolloverTasks) onRolloverTasks();
+                }}
+                className="px-3.5 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-semibold rounded-xl transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 hover:scale-105 active:scale-95"
+              >
+                Move to Today 🌸
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRolloverDismissed(true)}
+                className="px-2.5 py-1.5 text-amber-700/70 hover:text-amber-900 hover:bg-amber-100/60 text-xs font-medium rounded-xl transition-colors focus-visible:outline-none"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isPerfectDay && tasks.length > 0 && (
+          <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-pink-50/90 via-pink-100/40 to-pink-50/90 border border-pink-100/80 shadow-[0_4px_20px_rgba(244,114,182,0.06)] flex items-center gap-3.5 animate-slide-up-fade">
+            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl shrink-0 select-none">
+              🌸
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-pink-700">All tasks completed!</h4>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-pink-200/60 text-pink-700 px-2 py-0.5 rounded-full">
+                  Perfect Day
+                </span>
+              </div>
+              <p className="text-xs text-pink-500/80 mt-0.5">
+                You've completed everything planned for today. Time to rest and recharge 🍵
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Category Tag Filters (Shown if at least one task has a tag) */}
+        {availableTags.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setActiveTagFilter('all')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                activeTagFilter === 'all'
+                  ? 'bg-pink-100 text-pink-700 font-semibold shadow-xs'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-pink-50/50'
+              }`}
+            >
+              All ({tasks.length})
+            </button>
+            {availableTags.map(tag => {
+              const conf = TAG_CONFIG[tag];
+              const isSelected = activeTagFilter === tag;
+              const count = tasks.filter(t => t.tag === tag).length;
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setActiveTagFilter(isSelected ? 'all' : tag);
+                  }}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-all border ${
+                    isSelected
+                      ? `${conf.bgClass} ${conf.textClass} ${conf.borderClass} font-semibold ring-1 ring-pink-200 shadow-xs`
+                      : 'bg-white/70 text-gray-500 border-gray-100 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>{conf.icon}</span>
+                  <span>{conf.label}</span>
+                  <span className="text-[10px] opacity-70">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {tasks.length === 0 ? (
-          <div className="h-full min-h-[160px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full">
+          <div className="h-full min-h-[180px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full p-6">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>
             
-            <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-4 text-pink-200 relative z-10">
-              <CheckCircle2 size={32} />
+            <div className="w-16 h-16 bg-pink-50/80 border border-pink-100 rounded-2xl flex items-center justify-center mb-3 text-2xl relative z-10 shadow-sm">
+              🌸
             </div>
-            <p className="mb-4 relative z-10">No tasks for today. Take a rest or add one!</p>
+            <h4 className="text-base font-medium text-gray-700 mb-1 relative z-10">Clear mind, calm day</h4>
+            <p className="text-xs text-gray-400 mb-4 max-w-xs relative z-10">No tasks scheduled for today. Take a mindful break or add your first goal.</p>
             <button 
               onClick={() => setIsAdding(true)}
-              className="p-3 bg-pink-50 hover:bg-pink-100 text-pink-400 rounded-full transition-colors shadow-sm focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none relative z-10"
-              title="Add a new task"
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-500 rounded-xl font-medium text-xs transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none flex items-center gap-1.5 relative z-10 hover:scale-105 active:scale-95"
+              title="Add a new task (Press 'N')"
             >
-              <Plus size={24} />
+              <Plus size={16} />
+              Add Task (N)
             </button>
           </div>
         ) : (
           <ul className="space-y-3">
-            {tasks.map(task => (
+            {displayedTasks.map(task => (
               <li 
                 key={task.id} 
                 draggable
@@ -376,10 +571,10 @@ export function DailyTaskList({
                   
                   <button 
                     onClick={() => handleToggle(task.taskId, dateStr, task.isCompleted)}
-                    className={`relative transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px]
+                    className={`relative transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px] hover:scale-105 active:scale-90
                     ${task.isCompleted 
                       ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
-                      : 'text-gray-300 group-hover:text-pink-200 active:scale-90'
+                      : 'text-gray-300 group-hover:text-pink-200'
                     }`}
                   >
                     {task.isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
@@ -389,6 +584,7 @@ export function DailyTaskList({
                     <input
                       type="text"
                       autoFocus
+                      maxLength={250}
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       onKeyDown={(e) => handleEditKeyDown(e, task.taskId)}
@@ -398,27 +594,45 @@ export function DailyTaskList({
                   ) : (
                     <span 
                       onDoubleClick={() => handleDoubleClick(task.taskId, task.title)}
-                      className={`text-base md:text-lg transition-all duration-300 flex-1 truncate cursor-text select-none py-2 ${task.isCompleted ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}
+                      className={`text-base md:text-lg transition-all duration-300 flex-1 truncate cursor-text select-none py-2 flex items-center gap-2 ${task.isCompleted ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}
                     >
-                      {renderTaskTitle(task.title)}
+                      <span className="truncate">{renderTaskTitle(task.title)}</span>
+                      {task.tag && TAG_CONFIG[task.tag] && (
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${TAG_CONFIG[task.tag].bgClass} ${TAG_CONFIG[task.tag].textClass} ${TAG_CONFIG[task.tag].borderClass}`}>
+                          <span>{TAG_CONFIG[task.tag].icon}</span>
+                          <span className="hidden sm:inline">{TAG_CONFIG[task.tag].label}</span>
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
                 
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (task.recurrence !== 'none') {
-                      setTaskToDelete({ taskId: task.taskId, recurrence: task.recurrence });
-                    } else {
-                      onDeleteTask(task.taskId);
-                    }
-                  }}
-                  className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full shrink-0 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
-                  title="Delete task"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      handleDoubleClick(task.taskId, task.title);
+                    }}
+                    className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                    title="Edit task"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (task.recurrence !== 'none') {
+                        setTaskToDelete({ taskId: task.taskId, recurrence: task.recurrence });
+                      } else {
+                        onDeleteTask(task.taskId);
+                      }
+                    }}
+                    className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                    title="Delete task"
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -439,12 +653,40 @@ export function DailyTaskList({
             <input
               type="text"
               autoFocus
+              maxLength={250}
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Add a new task... (Press 'N')"
               className="w-full bg-transparent border-b border-pink-200 px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded text-gray-700 placeholder-gray-400"
             />
+            {/* Tag Selection Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 -mt-1">
+              <span className="text-xs text-gray-400 mr-0.5">Tag:</span>
+              {(Object.keys(TAG_CONFIG) as TaskTag[]).map(t => {
+                const conf = TAG_CONFIG[t];
+                const isSelected = selectedTag === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      setSelectedTag(isSelected ? undefined : t);
+                    }}
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
+                      isSelected
+                        ? `${conf.bgClass} ${conf.textClass} ${conf.borderClass} ring-2 ring-pink-300 font-semibold shadow-xs scale-105`
+                        : 'bg-white/80 hover:bg-gray-50 text-gray-500 border-gray-200/80 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <span>{conf.icon}</span>
+                    <span>{conf.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-500 relative">
                 <span className="mr-1">Repeat:</span>
@@ -502,8 +744,11 @@ export function DailyTaskList({
 
       {/* Delete Recurring Task Modal */}
       {taskToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 shadow-xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setTaskToDelete(null); }}
+        >
+          <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full animate-slide-up-fade border border-pink-100">
             <h3 className="text-xl font-semibold text-gray-800 mb-2">Delete recurring task</h3>
             <p className="text-gray-500 text-sm mb-6">This is a repeating task. How would you like to delete it?</p>
             
@@ -514,7 +759,7 @@ export function DailyTaskList({
                     onDeleteTaskInstance(taskToDelete.taskId, dateStr);
                     setTaskToDelete(null);
                   }}
-                  className="w-full py-3 px-4 text-left bg-gray-50 hover:bg-pink-50 rounded-xl text-gray-700 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  className="w-full py-3 px-4 text-left bg-pink-50 hover:bg-pink-100 rounded-xl text-gray-700 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
                 >
                   Delete this day only
                 </button>
@@ -525,7 +770,7 @@ export function DailyTaskList({
                     onDeleteTaskFuture(taskToDelete.taskId, dateStr);
                     setTaskToDelete(null);
                   }}
-                  className="w-full py-3 px-4 text-left bg-gray-50 hover:bg-pink-50 rounded-xl text-gray-700 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  className="w-full py-3 px-4 text-left bg-pink-50 hover:bg-pink-100 rounded-xl text-gray-700 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
                 >
                   Delete this and following days
                 </button>
@@ -535,7 +780,7 @@ export function DailyTaskList({
                   onDeleteTask(taskToDelete.taskId);
                   setTaskToDelete(null);
                 }}
-                className="w-full py-3 px-4 text-left bg-pink-50 hover:bg-pink-100 text-pink-600 font-medium rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                className="w-full py-3 px-4 text-left bg-pink-100 hover:bg-pink-200 text-pink-600 font-medium rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
               >
                 Delete all tasks
               </button>
@@ -552,3 +797,5 @@ export function DailyTaskList({
     </div>
   );
 }
+
+export const DailyTaskList = React.memo(DailyTaskListComponent);

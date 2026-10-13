@@ -45,9 +45,230 @@
   }
 }
 
+:root, [data-theme="sakura"] {
+  --color-pink-50: #fdf2f8;
+  --color-pink-100: #fce7f3;
+  --color-pink-200: #fbcfe8;
+  --color-pink-300: #f9a8d4;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
+  --color-pink-700: #be185d;
+  --color-pink-800: #9d174d;
+}
+
+[data-theme="matcha"] {
+  --color-pink-50: #f1f7f3;
+  --color-pink-100: #dfeeeb;
+  --color-pink-200: #bedec7;
+  --color-pink-300: #7ebf90;
+  --color-pink-400: #4e9e64;
+  --color-pink-500: #387e4c;
+  --color-pink-600: #2a633a;
+  --color-pink-700: #214f2e;
+  --color-pink-800: #193c23;
+}
+
+[data-theme="nordic"] {
+  --color-pink-50: #f1f6fb;
+  --color-pink-100: #e0ecf7;
+  --color-pink-200: #bcd5ec;
+  --color-pink-300: #78aed9;
+  --color-pink-400: #498ec4;
+  --color-pink-500: #2d6fa4;
+  --color-pink-600: #235885;
+  --color-pink-700: #1b4467;
+  --color-pink-800: #14334f;
+}
+
+[data-theme="midnight"] {
+  --color-pink-50: #242131;
+  --color-pink-100: #342e46;
+  --color-pink-200: #4c4267;
+  --color-pink-300: #ad94ec;
+  --color-pink-400: #c084fc;
+  --color-pink-500: #d8b4fe;
+  --color-pink-600: #e9d5ff;
+  --color-pink-700: #f3e8ff;
+  --color-pink-800: #faf5ff;
+}
+
+[data-theme="midnight"] body {
+  background-color: #121019;
+  color: #f3f4f6;
+}
+
+/* ── Solid white backgrounds ── */
+[data-theme="midnight"] .bg-white {
+  background-color: #1a1824 !important;
+  color: #f3f4f6;
+  border-color: #272336 !important;
+}
+
+/* ── Semi-transparent white backgrounds (tabs, pills, controls) ── */
+[data-theme="midnight"] .bg-white\/60,
+[data-theme="midnight"] .bg-white\/70,
+[data-theme="midnight"] .bg-white\/80,
+[data-theme="midnight"] .bg-white\/90 {
+  background-color: rgba(26, 24, 36, 0.85) !important;
+  color: #f3f4f6;
+  border-color: #2e293f !important;
+}
+
+/* ── Popover / dropdown backgrounds (ThemeSelector, AmbientControl) ── */
+[data-theme="midnight"] .bg-white\/95 {
+  background-color: rgba(26, 24, 36, 0.97) !important;
+  color: #f3f4f6;
+  border-color: #342e46 !important;
+}
+
+/* ── Gray button/dialog backgrounds (delete modal options) ── */
+[data-theme="midnight"] .bg-gray-50 {
+  background-color: #1e1b2a !important;
+  color: #f3f4f6;
+}
+
+[data-theme="midnight"] .hover\:bg-gray-100:hover {
+  background-color: #272336 !important;
+}
+
+/* ── Pink tinted backgrounds (delete all, selected states) ── */
+[data-theme="midnight"] .bg-pink-50 {
+  background-color: #242131 !important;
+}
+
+[data-theme="midnight"] .bg-pink-100 {
+  background-color: #2e283e !important;
+}
+
+[data-theme="midnight"] .bg-pink-100\/80 {
+  background-color: rgba(46, 40, 62, 0.8) !important;
+}
+
+[data-theme="midnight"] .bg-pink-100\/90 {
+  background-color: rgba(46, 40, 62, 0.9) !important;
+}
+
+[data-theme="midnight"] .bg-pink-50\/95 {
+  background-color: rgba(36, 33, 49, 0.95) !important;
+}
+
+/* ── Emerald active badge in ambient control ── */
+[data-theme="midnight"] .bg-emerald-50 {
+  background-color: rgba(16, 40, 30, 0.8) !important;
+}
+
+/* ── Text color overrides for readability ── */
+[data-theme="midnight"] .text-gray-800,
+[data-theme="midnight"] .text-gray-700 {
+  color: #f3f4f6 !important;
+}
+
+[data-theme="midnight"] .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+[data-theme="midnight"] .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+[data-theme="midnight"] .text-gray-400 {
+  color: #8b879a !important;
+}
+
+[data-theme="midnight"] .text-gray-300 {
+  color: #555066 !important;
+}
+
+[data-theme="midnight"] .text-pink-800 {
+  color: #e9d5ff !important;
+}
+
+[data-theme="midnight"] .text-pink-600 {
+  color: #d8b4fe !important;
+}
+
+[data-theme="midnight"] .text-pink-700 {
+  color: #c084fc !important;
+}
+
+/* ── Border overrides ── */
+[data-theme="midnight"] .border-pink-50,
+[data-theme="midnight"] .border-pink-100 {
+  border-color: #2a253a !important;
+}
+
+[data-theme="midnight"] .border-pink-50\/80,
+[data-theme="midnight"] .border-pink-100\/60,
+[data-theme="midnight"] .border-pink-200\/80 {
+  border-color: #342e46 !important;
+}
+
+[data-theme="midnight"] .border-white {
+  border-color: #1a1824 !important;
+}
+
+/* ── Hover states ── */
+[data-theme="midnight"] .hover\:bg-pink-50:hover,
+[data-theme="midnight"] .hover\:bg-pink-50\/60:hover,
+[data-theme="midnight"] .hover\:bg-pink-50\/70:hover {
+  background-color: #282438 !important;
+}
+
+[data-theme="midnight"] .hover\:bg-pink-100:hover,
+[data-theme="midnight"] .hover\:bg-pink-100\/80:hover {
+  background-color: #342e46 !important;
+}
+
+[data-theme="midnight"] .hover\:bg-pink-200:hover {
+  background-color: #3d3556 !important;
+}
+
+[data-theme="midnight"] .hover\:bg-white\/90:hover {
+  background-color: rgba(26, 24, 36, 0.95) !important;
+}
+
+/* ── Shadow overrides (no pink glow in dark mode) ── */
+[data-theme="midnight"] .shadow-pink-200\/20,
+[data-theme="midnight"] .shadow-pink-500\/5 {
+  --tw-shadow-color: transparent !important;
+}
+
+/* ── Input controls ── */
+[data-theme="midnight"] input,
+[data-theme="midnight"] select,
+[data-theme="midnight"] textarea {
+  color: #f3f4f6 !important;
+  border-color: #342e46 !important;
+}
+
+[data-theme="midnight"] input::placeholder {
+  color: #6b6580 !important;
+}
+
+/* ── Range slider ── */
+[data-theme="midnight"] input[type="range"] {
+  background-color: #342e46 !important;
+}
+
+[data-theme="midnight"] input[type="range"]::-webkit-slider-thumb {
+  background-color: #c084fc !important;
+}
+
 @layer base {
+  html, body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
   body {
-    @apply bg-white text-gray-800 antialiased;
+    @apply bg-white text-gray-800 antialiased transition-colors duration-500;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 }
 

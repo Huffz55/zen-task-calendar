@@ -8,8 +8,13 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, Play, Pause, RotateCcw, Plus, Minus, CheckCircle2, AlertCircle, X } from 'lucide-react';
-import { playZenChime, initAudioContext } from './utils/audio';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw } from 'lucide-react';
+import { initAudioContext } from './utils/audio';
+import { hapticWarning, hapticSuccess } from './utils/haptics';
+import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
+import { validateBackupPayload } from './utils/validation';
+import { useZenTimer } from './hooks/useZenTimer';
+import { useShortcuts } from './hooks/useShortcuts';
 
 interface AppToast {
   type?: 'success' | 'info' | 'error' | 'undo';
@@ -22,259 +27,10 @@ interface AppToast {
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isZenMode, setIsZenMode] = useState(false);
-  const [notification, setNotification] = useState<AppToast | null>(null);
-  const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
-  const [showOfflineReady, setShowOfflineReady] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [initialTime, setInitialTime] = useState(25 * 60);
-  const [currentHour, setCurrentHour] = useState(new Date().getHours());
-  const [activeTab, setActiveTab] = useState<'tasks' | 'lists'>('tasks');
-
-  const { tasks, addTask, deleteTask, deleteTaskInstance, deleteTaskFuture, restoreTask, toggleTaskCompletion, getTasksForDate, importTasks, editTask, reorderTasks, rescheduleTask } = useTasks();
-  const { lists, addList, deleteList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
-
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onOfflineReady() {
-      setShowOfflineReady(true);
-      setTimeout(() => setShowOfflineReady(false), 3000);
-    },
+  const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => {
+    return (localStorage.getItem('zen_theme') as AppTheme) || 'sakura';
   });
-
-  React.useEffect(() => {
-    // Ensure AudioContext is resumed on user interaction
-    const handleInteraction = () => initAudioContext();
-    window.addEventListener('click', handleInteraction, { once: true });
-    window.addEventListener('keydown', handleInteraction, { once: true });
-    return () => {
-      window.removeEventListener('click', handleInteraction);
-      window.removeEventListener('keydown', handleInteraction);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentHour(new Date().getHours());
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const endTimeRef = React.useRef<number | null>(null);
-  const timeLeftMsRef = React.useRef<number | null>(null);
-
-  const handleStartTimer = () => {
-    const remainingMs = timeLeftMsRef.current ?? (timeLeft <= 0 ? initialTime * 1000 : timeLeft * 1000);
-    endTimeRef.current = Date.now() + remainingMs;
-    timeLeftMsRef.current = null;
-    setIsTimerRunning(true);
-  };
-
-  const handlePauseTimer = () => {
-    if (endTimeRef.current !== null) {
-      const remainingMs = Math.max(0, endTimeRef.current - Date.now());
-      timeLeftMsRef.current = remainingMs;
-      setTimeLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
-    }
-    endTimeRef.current = null;
-    setIsTimerRunning(false);
-  };
-
-  const handleToggleTimer = () => {
-    if (isTimerRunning) {
-      handlePauseTimer();
-    } else {
-      handleStartTimer();
-    }
-  };
-
-  const handleResetTimer = () => {
-    endTimeRef.current = null;
-    timeLeftMsRef.current = null;
-    setIsTimerRunning(false);
-    setTimeLeft(initialTime);
-  };
-
-  const handleAdjustTime = (deltaSeconds: number) => {
-    const newInitial = Math.max(0, initialTime + deltaSeconds);
-    setInitialTime(newInitial);
-
-    if (isTimerRunning) {
-      const currentEnd = endTimeRef.current ?? (Date.now() + (timeLeftMsRef.current ?? timeLeft * 1000));
-      const newEnd = Math.max(Date.now(), currentEnd + deltaSeconds * 1000);
-      endTimeRef.current = newEnd;
-      timeLeftMsRef.current = null;
-      const remainingMs = Math.max(0, newEnd - Date.now());
-      const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
-      setTimeLeft(remainingSecs);
-
-      if (remainingMs <= 0) {
-        playZenChime();
-        setIsTimerRunning(false);
-        endTimeRef.current = null;
-      }
-    } else {
-      timeLeftMsRef.current = null;
-      setTimeLeft(prev => Math.max(0, prev + deltaSeconds));
-    }
-  };
-
-  const handleTimerChange = (minutes: number) => {
-    const newTime = minutes * 60;
-    endTimeRef.current = null;
-    timeLeftMsRef.current = null;
-    setIsTimerRunning(false);
-    setTimeLeft(newTime);
-    setInitialTime(newTime);
-  };
-
-  React.useEffect(() => {
-    if (!isTimerRunning) return;
-
-    if (endTimeRef.current === null) {
-      const remainingMs = timeLeftMsRef.current ?? (timeLeft <= 0 ? initialTime * 1000 : timeLeft * 1000);
-      endTimeRef.current = Date.now() + remainingMs;
-      timeLeftMsRef.current = null;
-    }
-
-    const tick = () => {
-      if (endTimeRef.current === null) return;
-      const remainingMs = Math.max(0, endTimeRef.current - Date.now());
-      const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
-
-      setTimeLeft(remainingSecs);
-
-      if (remainingMs <= 0) {
-        playZenChime();
-        setIsTimerRunning(false);
-        endTimeRef.current = null;
-        timeLeftMsRef.current = null;
-      }
-    };
-
-    tick();
-
-    const interval = setInterval(tick, 500);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        tick();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
-    };
-  }, [isTimerRunning]);
-
-  React.useEffect(() => {
-    if (isZenMode && timeLeft === initialTime && !isTimerRunning) {
-      handleStartTimer();
-    }
-  }, [isZenMode]);
-
-  // Screen Wake Lock API to prevent mobile sleep while timer is running
-  React.useEffect(() => {
-    let wakeLockSentinel: any = null;
-
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator && document.visibilityState === 'visible') {
-          wakeLockSentinel = await (navigator as any).wakeLock.request('screen');
-        }
-      } catch (err) {
-        console.warn('Wake Lock request failed:', err);
-      }
-    };
-
-    const releaseWakeLock = async () => {
-      if (wakeLockSentinel) {
-        try {
-          await wakeLockSentinel.release();
-        } catch (err) {
-          console.warn('Wake Lock release failed:', err);
-        } finally {
-          wakeLockSentinel = null;
-        }
-      }
-    };
-
-    if (isTimerRunning) {
-      requestWakeLock();
-    } else {
-      releaseWakeLock();
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isTimerRunning) {
-        requestWakeLock();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      releaseWakeLock();
-    };
-  }, [isTimerRunning]);
-
-  const handleSelectDate = (date: Date) => {
-    if (date > selectedDate) setSlideAnim('left');
-    else if (date < selectedDate) setSlideAnim('right');
-    setSelectedDate(date);
-    setTimeout(() => setSlideAnim(null), 150);
-  };
-
-  const handleDropTaskToCalendar = (taskId: string, targetDateStr: string) => {
-    rescheduleTask(taskId, targetDateStr);
-  };
-
-  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-  const dailyTasks = getTasksForDate(selectedDateStr);
-
-  const getTaskCountForDate = (dateStr: string) => {
-    return getTasksForDate(dateStr).length;
-  };
-
-  const currentStreak = useMemo(() => {
-    let streak = 0;
-    const today = new Date();
-    let checkDate = today;
-
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const todayTasks = getTasksForDate(todayStr);
-    const todayIsPerfect = todayTasks.length > 0 && todayTasks.every(t => t.isCompleted);
-
-    if (todayIsPerfect) {
-      streak++;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      checkDate = subDays(checkDate, 1);
-    }
-
-    while (true) {
-      const dateStr = format(checkDate, 'yyyy-MM-dd');
-      const dayTasks = getTasksForDate(dateStr);
-      const isPerfect = dayTasks.length > 0 && dayTasks.every(t => t.isCompleted);
-
-      if (isPerfect) {
-        streak++;
-        checkDate = subDays(checkDate, 1);
-      } else {
-        break;
-      }
-    }
-    return streak;
-  }, [tasks, getTasksForDate]);
+  const [notification, setNotification] = useState<AppToast | null>(null);
 
   const showToast = useCallback((toastData: {
     type?: 'success' | 'info' | 'error' | 'undo';
@@ -304,52 +60,225 @@ function App() {
     });
   }, []);
 
-  const handleDeleteTask = (taskId: string) => {
+  const {
+    timeLeft,
+    initialTime,
+    isTimerRunning,
+    isZenMode,
+    toggleZenMode,
+    toggleTimer,
+    resetTimer,
+    adjustTime,
+    setTimerMinutes,
+  } = useZenTimer(25);
+
+  useShortcuts({
+    onToggleZen: toggleZenMode,
+    onGoToToday: () => setSelectedDate(new Date()),
+  });
+
+  const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
+  const [showOfflineReady, setShowOfflineReady] = useState(false);
+  const [currentHour, setCurrentHour] = useState(new Date().getHours());
+  const [activeTab, setActiveTab] = useState<'tasks' | 'lists'>('tasks');
+
+  const { 
+    tasks, 
+    addTask, 
+    deleteTask, 
+    deleteTaskInstance, 
+    deleteTaskFuture, 
+    restoreTask, 
+    toggleTaskCompletion, 
+    getTasksForDate, 
+    importTasks, 
+    editTask, 
+    reorderTasks, 
+    rescheduleTask,
+    rolloverOverdueTasks,
+    getOverdueTasksCount,
+  } = useTasks();
+  const { lists, addList, deleteList, restoreList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
+  const [todayDateStr, setTodayDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onOfflineReady() {
+      setShowOfflineReady(true);
+      setTimeout(() => setShowOfflineReady(false), 3000);
+    },
+  });
+
+  React.useEffect(() => {
+    // Ensure AudioContext is resumed on user interaction
+    const handleInteraction = () => initAudioContext();
+    window.addEventListener('click', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const checkDateAndHour = () => {
+      const now = new Date();
+      setCurrentHour(now.getHours());
+      const nowStr = format(now, 'yyyy-MM-dd');
+      setTodayDateStr(prev => (prev !== nowStr ? nowStr : prev));
+    };
+
+    const interval = setInterval(checkDateAndHour, 30000);
+    window.addEventListener('focus', checkDateAndHour);
+    const handleVis = () => {
+      if (document.visibilityState === 'visible') checkDateAndHour();
+    };
+    document.addEventListener('visibilitychange', handleVis);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkDateAndHour);
+      document.removeEventListener('visibilitychange', handleVis);
+    };
+  }, []);
+
+  const handleSelectDate = useCallback((date: Date) => {
+    setSelectedDate(prev => {
+      if (date > prev) setSlideAnim('left');
+      else if (date < prev) setSlideAnim('right');
+      return date;
+    });
+    setTimeout(() => setSlideAnim(null), 150);
+  }, []);
+
+  const handleDropTaskToCalendar = useCallback((taskId: string, targetDateStr: string) => {
+    rescheduleTask(taskId, targetDateStr);
+  }, [rescheduleTask]);
+
+  const selectedDateStr = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
+  const dailyTasks = useMemo(() => getTasksForDate(selectedDateStr), [getTasksForDate, selectedDateStr]);
+  const overdueCount = useMemo(() => getOverdueTasksCount(todayDateStr), [getOverdueTasksCount, todayDateStr]);
+
+  const handleRollover = useCallback(() => {
+    const count = rolloverOverdueTasks(todayDateStr);
+    if (count > 0) {
+      hapticSuccess();
+      showToast({
+        type: 'success',
+        title: 'Rolled over!',
+        message: `${count} task${count > 1 ? 's' : ''} moved to today 🌸`,
+        actionLabel: 'OK',
+        duration: 4000,
+      });
+    }
+  }, [rolloverOverdueTasks, todayDateStr, showToast]);
+
+  const getTaskCountForDate = useCallback((dateStr: string) => {
+    return getTasksForDate(dateStr).length;
+  }, [getTasksForDate]);
+
+  const currentStreak = useMemo(() => {
+    let streak = 0;
+    const today = new Date();
+    let checkDate = today;
+
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const todayTasks = getTasksForDate(todayStr);
+    const todayIsPerfect = todayTasks.length > 0 && todayTasks.every(t => t.isCompleted);
+
+    if (todayIsPerfect) {
+      streak++;
+      checkDate = subDays(checkDate, 1);
+    } else {
+      checkDate = subDays(checkDate, 1);
+    }
+
+    const MAX_STREAK_DAYS = 365;
+    let daysChecked = 0;
+
+    while (daysChecked < MAX_STREAK_DAYS) {
+      daysChecked++;
+      const dateStr = format(checkDate, 'yyyy-MM-dd');
+      const dayTasks = getTasksForDate(dateStr);
+      const isPerfect = dayTasks.length > 0 && dayTasks.every(t => t.isCompleted);
+
+      if (isPerfect) {
+        streak++;
+        checkDate = subDays(checkDate, 1);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }, [tasks, getTasksForDate, todayDateStr]);
+
+  const handleDeleteTask = useCallback((taskId: string) => {
     const taskToDelete = tasks.find(t => t.id === taskId);
     if (taskToDelete) {
+      hapticWarning();
       deleteTask(taskId);
       showToast({
         type: 'undo',
         title: 'Task deleted',
         message: `"${taskToDelete.title}" removed`,
-        actionLabel: 'Geri Al',
+        actionLabel: 'Undo',
         onAction: () => restoreTask(taskToDelete),
         duration: 5000,
       });
     }
-  };
+  }, [tasks, deleteTask, restoreTask, showToast]);
 
-  const handleDeleteTaskInstance = (taskId: string, dateStr: string) => {
+  const handleDeleteTaskInstance = useCallback((taskId: string, dateStr: string) => {
     const taskToModify = tasks.find(t => t.id === taskId);
     if (taskToModify) {
+      hapticWarning();
       deleteTaskInstance(taskId, dateStr);
       showToast({
         type: 'undo',
         title: 'Day removed',
         message: `"${taskToModify.title}" skipped for this date`,
-        actionLabel: 'Geri Al',
+        actionLabel: 'Undo',
         onAction: () => restoreTask(taskToModify),
         duration: 5000,
       });
     }
-  };
+  }, [tasks, deleteTaskInstance, restoreTask, showToast]);
 
-  const handleDeleteTaskFuture = (taskId: string, dateStr: string) => {
+  const handleDeleteTaskFuture = useCallback((taskId: string, dateStr: string) => {
     const taskToModify = tasks.find(t => t.id === taskId);
     if (taskToModify) {
+      hapticWarning();
       deleteTaskFuture(taskId, dateStr);
       showToast({
         type: 'undo',
         title: 'Future tasks deleted',
         message: `"${taskToModify.title}" ended from this date`,
-        actionLabel: 'Geri Al',
+        actionLabel: 'Undo',
         onAction: () => restoreTask(taskToModify),
         duration: 5000,
       });
     }
-  };
+  }, [tasks, deleteTaskFuture, restoreTask, showToast]);
 
-  const handleExport = () => {
+  const handleDeleteList = useCallback((listId: string) => {
+    const listToDelete = lists.find(l => l.id === listId);
+    if (listToDelete) {
+      hapticWarning();
+      deleteList(listId);
+      showToast({
+        type: 'undo',
+        title: 'List deleted',
+        message: `"${listToDelete.title}" removed`,
+        actionLabel: 'Undo',
+        onAction: () => restoreList(listToDelete),
+        duration: 5000,
+      });
+    }
+  }, [lists, deleteList, restoreList, showToast]);
+
+  const handleExport = useCallback(() => {
     const dataStr = JSON.stringify({ tasks, lists }, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -362,14 +291,28 @@ function App() {
       type: 'success',
       title: 'Exported!',
       message: 'Backup saved to zen-tasks-backup.json 🌸',
-      actionLabel: 'Tamam',
+      actionLabel: 'OK',
       duration: 3500,
     });
-  };
+  }, [tasks, lists, showToast]);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Protection against giant files (5MB limit)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      showToast({
+        type: 'error',
+        title: 'Import Error',
+        message: 'File size exceeds 5MB limit.',
+        actionLabel: 'OK',
+        duration: 4000,
+      });
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -377,45 +320,46 @@ function App() {
         const content = event.target?.result as string;
         const parsed = JSON.parse(content);
         
-        let successTasks = false;
-        let successLists = false;
-
-        if (Array.isArray(parsed)) {
-          // Legacy backup format (only tasks array)
-          successTasks = importTasks(parsed);
-        } else if (parsed && typeof parsed === 'object') {
-          // Combined backup format
-          if (Array.isArray(parsed.tasks)) {
-            successTasks = importTasks(parsed.tasks);
-          }
-          if (Array.isArray(parsed.lists) && importLists) {
-            successLists = importLists(parsed.lists);
-          }
+        const validation = validateBackupPayload(parsed);
+        if (!validation.isValid) {
+          showToast({
+            type: 'error',
+            title: 'Import Rejected',
+            message: validation.error || 'Invalid or corrupted backup format.',
+            actionLabel: 'OK',
+            duration: 5000,
+          });
+          return;
         }
+
+        const successTasks = validation.tasks.length > 0 ? importTasks(validation.tasks) : true;
+        const successLists = validation.lists.length > 0 && importLists ? importLists(validation.lists) : true;
         
-        if (successTasks || successLists) {
+        if (successTasks && successLists) {
+          const taskCount = validation.tasks.length;
+          const listCount = validation.lists.length;
           showToast({
             type: 'success',
-            title: 'Success!',
-            message: 'Backup restored successfully! 🌸',
-            actionLabel: 'Tamam',
+            title: 'Backup Restored! 🌸',
+            message: `Successfully verified and imported ${taskCount} task${taskCount === 1 ? '' : 's'}${listCount > 0 ? ` and ${listCount} list${listCount === 1 ? '' : 's'}` : ''}.`,
+            actionLabel: 'OK',
             duration: 4000,
           });
         } else {
           showToast({
             type: 'error',
-            title: 'Import Error',
-            message: 'Invalid backup file format.',
-            actionLabel: 'Tamam',
+            title: 'Storage Error',
+            message: 'Failed to write validated backup to browser storage.',
+            actionLabel: 'OK',
             duration: 4000,
           });
         }
-      } catch (err) {
+      } catch {
         showToast({
           type: 'error',
           title: 'Import Error',
-          message: 'Error reading the backup file.',
-          actionLabel: 'Tamam',
+          message: 'Error reading backup file. Please ensure it is valid JSON.',
+          actionLabel: 'OK',
           duration: 4000,
         });
       }
@@ -431,30 +375,52 @@ function App() {
     return "Time to rest. 🌙";
   };
 
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('zen_theme', currentTheme);
+  }, [currentTheme]);
+
+  React.useEffect(() => {
+    const handleQuotaExceeded = (e: Event) => {
+      const custom = e as CustomEvent<{ message?: string }>;
+      showToast({
+        type: 'error',
+        title: 'Storage Full ⚠️',
+        message: custom.detail?.message || 'Browser storage quota is full. Please export your backup and clear old tasks.',
+        actionLabel: 'Export',
+        onAction: handleExport,
+        duration: 8000,
+      });
+    };
+    window.addEventListener('zen_storage_quota_exceeded', handleQuotaExceeded);
+    return () => window.removeEventListener('zen_storage_quota_exceeded', handleQuotaExceeded);
+  }, [handleExport, showToast]);
+
+  const handleThemeChange = useCallback((newTheme: AppTheme) => {
+    setCurrentTheme(newTheme);
+    const themeNames: Record<AppTheme, string> = {
+      sakura: 'Sakura Rose 🌸',
+      matcha: 'Matcha Garden 🍵',
+      nordic: 'Nordic Breeze 🌊',
+      midnight: 'Midnight Silk 🌙',
+    };
+    showToast({
+      type: 'info',
+      title: 'Palette Changed',
+      message: `Switched to ${themeNames[newTheme]}`,
+      duration: 3000,
+    });
+  }, [showToast]);
+
   const getAmbientBackground = () => {
+    if (currentTheme === 'midnight') return "bg-[#121019]";
+    if (currentTheme === 'matcha') return "bg-[#f2f7f3]";
+    if (currentTheme === 'nordic') return "bg-[#f1f6fa]";
     if (currentHour >= 6 && currentHour < 12) return "bg-[#fffbf6]"; // Peach
     if (currentHour >= 12 && currentHour < 17) return "bg-slate-50"; // Light Slate
     if (currentHour >= 17 && currentHour < 20) return "bg-[#fff5f8]"; // Sunset Pink
     return "bg-[#f9f7fb]"; // Lavender
   };
-
-  React.useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
-        return;
-      }
-
-      if (e.key.toLowerCase() === 'f') {
-        e.preventDefault();
-        setIsZenMode(prev => !prev);
-      } else if (e.key.toLowerCase() === 't') {
-        e.preventDefault();
-        setSelectedDate(new Date());
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
 
   React.useEffect(() => {
     const pendingCount = dailyTasks.filter(t => !t.isCompleted).length;
@@ -484,23 +450,26 @@ function App() {
   }, [dailyTasks]);
 
   return (
-    <div className={`h-[100dvh] overflow-hidden flex flex-col items-center justify-center p-4 md:p-6 font-sans relative transition-colors duration-[3000ms] ease-in-out ${getAmbientBackground()}`}>
+    <div className={`h-[100dvh] overflow-hidden flex flex-col items-center justify-center p-4 md:p-6 font-sans relative transition-colors duration-500 ease-in-out ${getAmbientBackground()}`}>
       
-      {/* Tab Navigation */}
+      {/* Tab Navigation & Theme Selector */}
       {!isZenMode && (
-        <div className="flex bg-white/60 backdrop-blur-md p-1.5 rounded-full shadow-sm mb-4 md:mb-6 border border-pink-50/80 z-10 shrink-0">
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'tasks' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-          >
-            Tasks
-          </button>
-          <button
-            onClick={() => setActiveTab('lists')}
-            className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'lists' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-          >
-            Lists
-          </button>
+        <div className="flex items-center gap-2.5 mb-4 md:mb-6 z-40 shrink-0 relative">
+          <div className="flex bg-white/60 backdrop-blur-md p-1.5 rounded-full shadow-sm border border-pink-50/80">
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'tasks' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Tasks
+            </button>
+            <button
+              onClick={() => setActiveTab('lists')}
+              className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'lists' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Lists
+            </button>
+          </div>
+          <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleThemeChange} />
         </div>
       )}
 
@@ -592,17 +561,16 @@ function App() {
                 onEditTask={editTask}
                 onReorderTasks={reorderTasks}
                 isZenMode={isZenMode}
-                onToggleZenMode={() => setIsZenMode(!isZenMode)}
+                onToggleZenMode={toggleZenMode}
                 timeLeft={timeLeft}
-                setTimeLeft={setTimeLeft}
                 initialTime={initialTime}
-                setInitialTime={setInitialTime}
                 isTimerRunning={isTimerRunning}
-                setIsTimerRunning={setIsTimerRunning}
-                handleTimerChange={handleTimerChange}
-                onToggleTimer={handleToggleTimer}
-                onResetTimer={handleResetTimer}
-                onAdjustTimer={handleAdjustTime}
+                handleTimerChange={setTimerMinutes}
+                onToggleTimer={toggleTimer}
+                onResetTimer={resetTimer}
+                onAdjustTimer={adjustTime}
+                overdueTasksCount={overdueCount}
+                onRolloverTasks={handleRollover}
               />
             </div>
           </div>
@@ -616,7 +584,7 @@ function App() {
             <CustomLists 
               lists={lists} 
               onAddList={addList} 
-              onDeleteList={deleteList}
+              onDeleteList={handleDeleteList}
               onAddListItem={addListItem}
               onDeleteListItem={deleteListItem}
               onToggleListItem={toggleListItem}

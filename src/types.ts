@@ -1,10 +1,13 @@
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly';
 
+export type TaskTag = 'work' | 'personal' | 'health' | 'ideas' | 'priority';
+
 export interface Task {
   id: string;
   title: string;
   date: string; // YYYY-MM-DD
   recurrence: RecurrenceType;
+  tag?: TaskTag;
   completedDates: string[]; // List of YYYY-MM-DD when this task was completed
   excludedDates?: string[]; // List of YYYY-MM-DD when this task was skipped/deleted for that specific day
   endDate?: string; // YYYY-MM-DD when this task recurrence ends
@@ -16,6 +19,7 @@ export interface DailyTask {
   isCompleted: boolean;
   taskId: string;
   recurrence: RecurrenceType;
+  tag?: TaskTag;
 }
 
 export interface ListItem {

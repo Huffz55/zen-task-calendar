@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { CustomList } from '../types';
 import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { playSoftPop } from '../utils/audio';
+import { hapticLight, hapticSuccess, hapticWarning } from '../utils/haptics';
 
 interface CustomListsProps {
   lists: CustomList[];
@@ -12,7 +13,7 @@ interface CustomListsProps {
   onToggleListItem: (listId: string, itemId: string) => void;
 }
 
-export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onDeleteListItem, onToggleListItem }: CustomListsProps) {
+function CustomListsComponent({ lists, onAddList, onDeleteList, onAddListItem, onDeleteListItem, onToggleListItem }: CustomListsProps) {
   const [newListTitle, setNewListTitle] = useState('');
   const [newItemTexts, setNewItemTexts] = useState<Record<string, string>>({});
 
@@ -20,6 +21,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
     e.preventDefault();
     if (newListTitle.trim()) {
       onAddList(newListTitle.trim());
+      hapticLight();
       setNewListTitle('');
     }
   };
@@ -29,6 +31,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
     const text = newItemTexts[listId];
     if (text?.trim()) {
       onAddListItem(listId, text.trim());
+      hapticLight();
       setNewItemTexts(prev => ({ ...prev, [listId]: '' }));
     }
   };
@@ -36,6 +39,9 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
   const handleToggle = (listId: string, itemId: string, isCompleted: boolean) => {
     if (!isCompleted) {
       playSoftPop();
+      hapticSuccess();
+    } else {
+      hapticLight();
     }
     onToggleListItem(listId, itemId);
   };
@@ -50,6 +56,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
             value={newListTitle}
             onChange={(e) => setNewListTitle(e.target.value)}
             placeholder="Create a new list..."
+            maxLength={80}
             className="flex-1 min-w-0 bg-pink-50/30 border border-pink-100 px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded-xl text-gray-700 placeholder-gray-400"
           />
           <button 
@@ -73,7 +80,10 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
               <div className="flex justify-between items-center mb-3">
                 <h4 className="text-lg font-medium text-gray-800">{list.title}</h4>
                 <button 
-                  onClick={() => onDeleteList(list.id)}
+                  onClick={() => {
+                    hapticWarning();
+                    onDeleteList(list.id);
+                  }}
                   className="p-1.5 text-pink-200 hover:text-pink-400 transition-colors rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                   title="Delete list"
                 >
@@ -86,7 +96,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
                   <li key={item.id} className="group flex items-center justify-between p-2 py-3 md:py-2 rounded-xl hover:bg-pink-50/50 transition-colors">
                     <div className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer min-h-[44px]" onClick={() => handleToggle(list.id, item.id, item.completed)}>
                       <button 
-                        className={`transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px]
+                        className={`transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px] hover:scale-105 active:scale-90
                         ${item.completed 
                           ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
                           : 'text-gray-300 group-hover:text-pink-200'
@@ -99,7 +109,11 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
                       </span>
                     </div>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); onDeleteListItem(list.id, item.id); }}
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        hapticWarning();
+                        onDeleteListItem(list.id, item.id); 
+                      }}
                       className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-200 hover:text-pink-400 transition-opacity rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
                       title="Delete item"
                     >
@@ -116,6 +130,7 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
                     value={newItemTexts[list.id] || ''}
                     onChange={(e) => setNewItemTexts(prev => ({ ...prev, [list.id]: e.target.value }))}
                     placeholder="Add an item..."
+                    maxLength={250}
                     className="w-full bg-transparent border-b border-transparent focus:border-pink-200 px-2 py-1.5 focus-visible:outline-none text-gray-600 text-sm placeholder-gray-300 transition-colors"
                   />
                 </div>
@@ -135,3 +150,5 @@ export function CustomLists({ lists, onAddList, onDeleteList, onAddListItem, onD
     </div>
   );
 }
+
+export const CustomLists = React.memo(CustomListsComponent);
