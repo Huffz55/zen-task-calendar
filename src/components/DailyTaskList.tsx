@@ -37,6 +37,7 @@ interface DailyTaskListProps {
   onToggleTimer?: () => void;
   onResetTimer?: () => void;
   onAdjustTimer?: (seconds: number) => void;
+  onFinishEarly?: () => void;
   overdueTasksCount?: number;
   onRolloverTasks?: () => void;
 }
@@ -63,6 +64,7 @@ function DailyTaskListComponent({
   onToggleTimer,
   onResetTimer,
   onAdjustTimer,
+  onFinishEarly,
   overdueTasksCount = 0,
   onRolloverTasks
 }: DailyTaskListProps) {
@@ -398,6 +400,16 @@ function DailyTaskListComponent({
                 >
                   <RotateCcw size={16} />
                 </button>
+
+                {onFinishEarly && (isTimerRunning || (timeLeft !== undefined && initialTime !== undefined && timeLeft < initialTime)) && (
+                  <button
+                    onClick={onFinishEarly}
+                    className="px-2.5 py-1 text-xs font-semibold text-white bg-pink-500 hover:bg-pink-600 rounded-full transition-all shadow-xs flex items-center gap-1 active:scale-95"
+                    title="Finish session and log to focus analytics"
+                  >
+                    Finish Session
+                  </button>
+                )}
               </div>
               
               <div className="flex items-center gap-1.5">

@@ -26,6 +26,11 @@ interface SoundOption {
   icon: React.ReactNode;
 }
 
+export interface AmbientSoundControlProps {
+  align?: 'left' | 'right' | 'center';
+  dropDirection?: 'up' | 'down';
+}
+
 const SOUNDS: SoundOption[] = [
   { type: 'none', label: 'Off', sublabel: 'Silence', icon: <VolumeX size={15} /> },
   { type: 'rain', label: 'Rain', sublabel: 'Gentle shower 🌧️', icon: <CloudRain size={15} /> },
@@ -35,7 +40,10 @@ const SOUNDS: SoundOption[] = [
   { type: 'fire', label: 'Fireplace', sublabel: 'Cozy crackle 🔥', icon: <Flame size={15} /> },
 ];
 
-export function AmbientSoundControl() {
+export function AmbientSoundControl({
+  align = 'right',
+  dropDirection = 'down',
+}: AmbientSoundControlProps = {}) {
   const [selectedSound, setSelectedSound] = useState<AmbientSoundType>(() => getAmbientSound());
   const [volume, setVolume] = useState<number>(() => getAmbientVolume());
   const [isOpen, setIsOpen] = useState(false);
@@ -73,7 +81,7 @@ export function AmbientSoundControl() {
   const isPlaying = selectedSound !== 'none';
 
   return (
-    <div className={`relative inline-block ${isOpen ? 'z-40' : 'z-20'}`} ref={containerRef}>
+    <div className={`relative inline-block ${isOpen ? 'z-50' : 'z-20'}`} ref={containerRef}>
       {/* Trigger Pill Button */}
       <button
         onClick={() => {
@@ -101,7 +109,17 @@ export function AmbientSoundControl() {
 
       {/* Floating Popover Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl border border-pink-100 shadow-[0_16px_40px_rgba(244,114,182,0.18)] p-3 z-50 animate-slide-up-fade">
+        <div
+          className={`absolute ${
+            dropDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+          } ${
+            align === 'center'
+              ? 'left-1/2 -translate-x-1/2'
+              : align === 'left'
+              ? 'left-0'
+              : 'right-0'
+          } w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl border border-pink-100 shadow-[0_20px_50px_rgba(244,114,182,0.22)] p-3 z-50 animate-slide-up-fade`}
+        >
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-pink-50">
             <span className="text-[11px] font-bold uppercase tracking-wider text-pink-400">
               Focus Ambience

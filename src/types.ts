@@ -42,3 +42,10 @@ export interface SyncDocState<T> {
   updatedAt: number;
 }
 
+export interface FocusSession {
+  id: string;
+  date: string; // YYYY-MM-DD
+  durationSeconds: number;
+  timestamp: number;
+}
+

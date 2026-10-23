@@ -15,9 +15,13 @@ export interface ZenTimerState {
   resetTimer: () => void;
   adjustTime: (deltaSeconds: number) => void;
   setTimerMinutes: (minutes: number) => void;
+  finishEarlySession: () => void;
 }
 
-export function useZenTimer(defaultMinutes = 25): ZenTimerState {
+export function useZenTimer(
+  defaultMinutes = 25,
+  onTimerComplete?: (durationSeconds: number) => void
+): ZenTimerState {
   const [initialTime, setInitialTime] = useState(defaultMinutes * 60);
   const [timeLeft, setTimeLeft] = useState(defaultMinutes * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -115,6 +119,9 @@ export function useZenTimer(defaultMinutes = 25): ZenTimerState {
         hapticCelebration();
         stopAmbientSound(1000);
         playZenChime();
+        if (onTimerComplete) {
+          onTimerComplete(initialTime);
+        }
         setIsTimerRunning(false);
         endTimeRef.current = null;
         timeLeftMsRef.current = null;
@@ -195,6 +202,28 @@ export function useZenTimer(defaultMinutes = 25): ZenTimerState {
     };
   }, [isTimerRunning]);
 
+  const finishEarlySession = useCallback(() => {
+    let elapsedSeconds = 0;
+    if (endTimeRef.current !== null) {
+      const remainingMs = Math.max(0, endTimeRef.current - Date.now());
+      const remainingSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+      elapsedSeconds = Math.max(0, initialTime - remainingSecs);
+    } else {
+      elapsedSeconds = Math.max(0, initialTime - timeLeft);
+    }
+
+    if (elapsedSeconds >= 10 && onTimerComplete) {
+      onTimerComplete(elapsedSeconds);
+      hapticCelebration();
+      playZenChime();
+    }
+
+    endTimeRef.current = null;
+    timeLeftMsRef.current = null;
+    setIsTimerRunning(false);
+    setTimeLeft(initialTime);
+  }, [initialTime, timeLeft, onTimerComplete]);
+
   return {
     timeLeft,
     initialTime,
@@ -207,5 +236,6 @@ export function useZenTimer(defaultMinutes = 25): ZenTimerState {
     resetTimer,
     adjustTime,
     setTimerMinutes,
+    finishEarlySession,
   };
 }

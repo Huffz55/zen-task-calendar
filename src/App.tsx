@@ -8,7 +8,7 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause } from 'lucide-react';
 import { initAudioContext } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
@@ -16,6 +16,9 @@ import { SyncModal } from './components/SyncModal';
 import { validateBackupPayload } from './utils/validation';
 import { useZenTimer } from './hooks/useZenTimer';
 import { useShortcuts } from './hooks/useShortcuts';
+import { useFocusStats } from './hooks/useFocusStats';
+import { FocusAnalyticsCard } from './components/FocusAnalyticsCard';
+import { AmbientSoundControl } from './components/AmbientSoundControl';
 
 interface AppToast {
   type?: 'success' | 'info' | 'error' | 'undo';
@@ -62,6 +65,8 @@ function App() {
     });
   }, []);
 
+  const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
+
   const {
     timeLeft,
     initialTime,
@@ -72,7 +77,8 @@ function App() {
     resetTimer,
     adjustTime,
     setTimerMinutes,
-  } = useZenTimer(25);
+    finishEarlySession,
+  } = useZenTimer(25, recordFocusSession);
 
   useShortcuts({
     onToggleZen: toggleZenMode,
@@ -82,7 +88,7 @@ function App() {
   const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
   const [showOfflineReady, setShowOfflineReady] = useState(false);
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
-  const [activeTab, setActiveTab] = useState<'tasks' | 'lists'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'lists' | 'focus'>('tasks');
 
   const { 
     tasks, 
@@ -470,6 +476,12 @@ function App() {
             >
               Lists
             </button>
+            <button
+              onClick={() => setActiveTab('focus')}
+              className={`min-h-[44px] px-6 py-2 md:px-8 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 ${activeTab === 'focus' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Focus
+            </button>
           </div>
           <button
             onClick={() => setIsSyncModalOpen(true)}
@@ -579,6 +591,7 @@ function App() {
                 onToggleTimer={toggleTimer}
                 onResetTimer={resetTimer}
                 onAdjustTimer={adjustTime}
+                onFinishEarly={finishEarlySession}
                 overdueTasksCount={overdueCount}
                 onRolloverTasks={handleRollover}
               />
@@ -599,6 +612,109 @@ function App() {
               onDeleteListItem={deleteListItem}
               onToggleListItem={toggleListItem}
             />
+          </div>
+        </div>
+
+        {/* Focus Layout (Absolute Positioned for Smooth Transitions) */}
+        <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden pb-32 lg:pb-8
+          ${activeTab === 'focus' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none invisible -z-10'}
+        `}>
+          <div className="w-full max-w-2xl h-auto flex flex-col gap-6 py-2 px-1">
+            {/* Zen Timer Big View */}
+            <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center">
+              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-6">
+                <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-pink-400'}`} />
+                <span className="text-xs font-semibold text-pink-600">
+                  {isTimerRunning ? 'Deep Focus Active 🧘' : 'Ready to Focus'}
+                </span>
+              </div>
+
+              {/* Digits */}
+              <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none">
+                {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
+              </div>
+              <p className="text-xs text-gray-400 mt-2 font-medium">
+                {isTimerRunning ? 'Immerse yourself in your task' : 'Select a duration or press play'}
+              </p>
+
+              {/* Adjust buttons */}
+              <div className="flex items-center gap-3 mt-5">
+                <button
+                  onClick={() => adjustTime(-5 * 60)}
+                  className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-pink-600 bg-white/80 hover:bg-pink-50 border border-pink-100 rounded-xl transition-all"
+                >
+                  -5 min
+                </button>
+                <button
+                  onClick={() => adjustTime(5 * 60)}
+                  className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-pink-600 bg-white/80 hover:bg-pink-50 border border-pink-100 rounded-xl transition-all"
+                >
+                  +5 min
+                </button>
+              </div>
+
+              {/* Main controls */}
+              <div className="flex items-center gap-4 mt-6">
+                <button
+                  onClick={resetTimer}
+                  className="w-12 h-12 rounded-full border border-pink-100 bg-white/80 hover:bg-pink-50 flex items-center justify-center text-gray-400 hover:text-pink-500 transition-all active:scale-95 shadow-xs"
+                  title="Reset Timer"
+                >
+                  <RotateCcw size={18} />
+                </button>
+                <button
+                  onClick={toggleTimer}
+                  className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-pink-200"
+                  title={isTimerRunning ? 'Pause' : 'Start'}
+                >
+                  {isTimerRunning ? <Pause size={26} /> : <Play size={26} className="ml-1" />}
+                </button>
+              </div>
+
+              {/* Finish early button */}
+              {(isTimerRunning || timeLeft < initialTime) && (
+                <button
+                  onClick={finishEarlySession}
+                  className="mt-5 px-5 py-2 text-xs font-bold text-pink-600 bg-pink-100/70 hover:bg-pink-200/80 rounded-full border border-pink-200 transition-all active:scale-95 flex items-center gap-1.5 shadow-xs"
+                >
+                  <span>Finish Session & Log Focus</span>
+                  <span>✨</span>
+                </button>
+              )}
+
+              {/* Preset chips */}
+              <div className="flex items-center gap-2 mt-7 flex-wrap justify-center">
+                {[15, 25, 45, 60].map(mins => (
+                  <button
+                    key={mins}
+                    onClick={() => setTimerMinutes(mins)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      initialTime === mins * 60
+                        ? 'bg-pink-500 text-white shadow-xs'
+                        : 'bg-white/80 text-gray-500 hover:text-pink-600 border border-pink-100'
+                    }`}
+                  >
+                    {mins}m
+                  </button>
+                ))}
+              </div>
+
+              {/* Ambient Sound Bar in Focus view */}
+              <div className="mt-6 pt-5 border-t border-pink-100/80 w-full flex justify-center relative z-40">
+                <AmbientSoundControl align="center" dropDirection="down" />
+              </div>
+            </div>
+
+            {/* Weekly Focus Analytics Card */}
+            <div className="relative z-10">
+              <FocusAnalyticsCard
+                totalFocusSeconds={focusStats.totalFocusSeconds}
+                totalSessionsCount={focusStats.totalSessionsCount}
+                todayFocusSeconds={focusStats.todayFocusSeconds}
+                weeklyDays={focusStats.weeklyDays}
+                maxDaySeconds={focusStats.maxDaySeconds}
+              />
+            </div>
           </div>
         </div>
         

@@ -420,6 +420,8 @@ export class HybridFirestoreListStorage implements IListStorage {
   }
 }
 
+import { defaultFocusStorage } from './focusStorage';
+
 export const defaultTaskStorage: ITaskStorage = new HybridFirestoreTaskStorage();
 export const defaultListStorage: IListStorage = new HybridFirestoreListStorage();
 
@@ -427,5 +429,6 @@ export function switchGlobalSyncKey(newKey: string): boolean {
   if (!setSyncKey(newKey)) return false;
   (defaultTaskStorage as HybridFirestoreTaskStorage).switchSyncKey(newKey);
   (defaultListStorage as HybridFirestoreListStorage).switchSyncKey(newKey);
+  defaultFocusStorage.switchSyncKey(newKey);
   return true;
 }
