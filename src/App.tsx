@@ -8,7 +8,7 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle } from 'lucide-react';
 import { initAudioContext, playSingingBowl, playWaterDrop } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
@@ -23,6 +23,7 @@ import { ZenHeatmap } from './components/ZenHeatmap';
 import { ZenBreathingModal } from './components/ZenBreathingModal';
 import { EveningReviewModal } from './components/EveningReviewModal';
 import { ZenMilestonesModal } from './components/ZenMilestonesModal';
+import { ShortcutsModal } from './components/ShortcutsModal';
 
 interface AppToast {
   type?: 'success' | 'info' | 'error' | 'undo';
@@ -91,6 +92,9 @@ function App() {
     rescheduleTask,
     rolloverOverdueTasks,
     getOverdueTasksCount,
+    autoArchiveNeglectedTasks,
+    unarchiveTask,
+    getArchivedTasks,
     togglePinTask,
     deferTaskToTomorrow,
     duplicateTask,
@@ -100,6 +104,8 @@ function App() {
   const [isZenBreathingOpen, setIsZenBreathingOpen] = useState(false);
   const [isEveningReviewOpen, setIsEveningReviewOpen] = useState(false);
   const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isSoftHorizonMode, setIsSoftHorizonMode] = useState(false);
 
   const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
 
@@ -143,6 +149,8 @@ function App() {
   useShortcuts({
     onToggleZen: toggleZenMode,
     onGoToToday: () => setSelectedDate(new Date()),
+    onToggleShortcuts: () => setIsShortcutsOpen(prev => !prev),
+    onToggleTimer: toggleTimer,
   });
 
   const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
@@ -152,6 +160,11 @@ function App() {
 
   const { lists, addList, deleteList, restoreList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
   const [todayDateStr, setTodayDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+
+  // Silently auto-archive neglected tasks older than 14 days
+  React.useEffect(() => {
+    autoArchiveNeglectedTasks(todayDateStr);
+  }, [todayDateStr, autoArchiveNeglectedTasks]);
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -554,11 +567,18 @@ function App() {
           </button>
           <button
             onClick={() => setIsEveningReviewOpen(true)}
-            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-pink-500 hover:text-pink-600 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
-            title="Evening Review & Wind Down"
+            className={`min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95 ${
+              currentHour >= 20
+                ? 'border-pink-300 text-pink-600 bg-white shadow-md ring-2 ring-pink-100'
+                : 'border-pink-50/80 text-pink-500 hover:text-pink-600 hover:bg-white'
+            }`}
+            title="Evening Review & Wind Down (Ready to close your day? 🌙)"
           >
-            <Moon size={15} />
+            <Moon size={15} className={currentHour >= 20 ? 'animate-pulse text-pink-500' : ''} />
             <span className="hidden sm:inline">Review</span>
+            {currentHour >= 20 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-pink-500 ml-0.5" />
+            )}
           </button>
           <button
             onClick={() => setIsMilestonesOpen(true)}
@@ -567,6 +587,14 @@ function App() {
           >
             <Award size={15} />
             <span className="hidden sm:inline">Badges</span>
+          </button>
+          <button
+            onClick={() => setIsShortcutsOpen(true)}
+            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-gray-500 hover:text-gray-700 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
+            title="Keyboard Shortcuts (?)"
+          >
+            <HelpCircle size={15} />
+            <span className="hidden sm:inline">Shortcuts</span>
           </button>
           <ThemeSelector
             currentTheme={currentTheme}
@@ -760,12 +788,25 @@ function App() {
               </div>
 
               {/* Digits */}
-              <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none">
-                {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
+              <div
+                onClick={() => {
+                  playWaterDrop();
+                  setIsSoftHorizonMode(prev => !prev);
+                }}
+                className="cursor-pointer group flex flex-col items-center"
+                title="Click to toggle Soft Horizon Mode 🌸"
+              >
+                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none group-hover:text-pink-500 transition-colors">
+                  {isSoftHorizonMode
+                    ? `~${Math.max(1, Math.ceil((timeLeft || 0) / 60))}m`
+                    : `${Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:${(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}`}
+                </div>
+                <p className="text-xs text-gray-400 mt-2 font-medium">
+                  {isSoftHorizonMode
+                    ? 'Soft Horizon Mode 🌸 (click for exact seconds)'
+                    : (isTimerRunning ? 'Immerse yourself in your task' : 'Select a duration or press play')}
+                </p>
               </div>
-              <p className="text-xs text-gray-400 mt-2 font-medium">
-                {isTimerRunning ? 'Immerse yourself in your task' : 'Select a duration or press play'}
-              </p>
 
               {/* Adjust buttons */}
               <div className="flex items-center gap-3 mt-5">
@@ -1001,6 +1042,12 @@ function App() {
         tasks={tasks}
         currentStreak={currentStreak}
         totalFocusSeconds={focusStats.totalFocusSeconds}
+      />
+
+      {/* Keyboard Shortcuts Cheatsheet Modal */}
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
 
       {/* Floating Mini Focus Player (Visible on Tasks / Lists when Timer is active) */}

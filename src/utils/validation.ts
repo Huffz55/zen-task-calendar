@@ -87,6 +87,8 @@ export function validateTask(raw: unknown): Task | null {
     : undefined;
 
   const isPinned = Boolean(candidate.isPinned);
+  const isArchived = Boolean(candidate.isArchived);
+  const archivedAt = isValidDateString(candidate.archivedAt) ? candidate.archivedAt : undefined;
   const estimatedMinutes = typeof candidate.estimatedMinutes === 'number' && candidate.estimatedMinutes > 0
     ? Math.floor(candidate.estimatedMinutes)
     : undefined;
@@ -103,6 +105,8 @@ export function validateTask(raw: unknown): Task | null {
     subtasks,
     focusedSeconds,
     isPinned: isPinned || undefined,
+    isArchived: isArchived || undefined,
+    archivedAt,
     estimatedMinutes,
   };
 }

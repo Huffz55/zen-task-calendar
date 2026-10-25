@@ -173,6 +173,9 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     if (!isValid(targetDate)) return [];
 
     return tasks.filter(task => {
+      // Archived tasks do not appear in active daily schedule
+      if (task.isArchived) return false;
+
       const startDate = parseISO(task.date);
       if (!isValid(startDate)) return false;
 
@@ -395,6 +398,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
   const rolloverOverdueTasks = useCallback((targetDateStr: string) => {
     let count = 0;
     setTasks(prev => prev.map(task => {
+      if (task.isArchived) return task;
       const isNonRecurring = !task.recurrence || task.recurrence === 'none';
       const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
       const isOverdue = task.date < targetDateStr;
@@ -413,11 +417,62 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
 
   const getOverdueTasksCount = useCallback((todayStr: string) => {
     return tasks.filter(task => {
+      if (task.isArchived) return false;
       const isNonRecurring = !task.recurrence || task.recurrence === 'none';
       const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
       const isOverdue = task.date < todayStr;
       return isNonRecurring && !isCompleted && isOverdue;
     }).length;
+  }, [tasks]);
+
+  // Silent Görev Mezarlığı: Auto-archive non-recurring incomplete tasks older than 14 days
+  const autoArchiveNeglectedTasks = useCallback((currentDateStr: string) => {
+    const today = parseISO(currentDateStr);
+    if (!isValid(today)) return 0;
+
+    let archivedCount = 0;
+    setTasks(prev => prev.map(task => {
+      if (task.isArchived) return task;
+      const isNonRecurring = !task.recurrence || task.recurrence === 'none';
+      if (!isNonRecurring) return task;
+
+      const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
+      if (isCompleted) return task;
+
+      const taskDate = parseISO(task.date);
+      if (!isValid(taskDate)) return task;
+
+      const diffDays = differenceInDays(today, taskDate);
+      if (diffDays >= 14) {
+        archivedCount++;
+        return {
+          ...task,
+          isArchived: true,
+          archivedAt: currentDateStr,
+        };
+      }
+      return task;
+    }));
+
+    return archivedCount;
+  }, []);
+
+  const unarchiveTask = useCallback((taskId: string, targetDateStr?: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          isArchived: false,
+          archivedAt: undefined,
+          date: targetDateStr || t.date,
+        };
+      }
+      return t;
+    }));
+  }, []);
+
+  const getArchivedTasks = useCallback(() => {
+    return tasks.filter(t => t.isArchived);
   }, [tasks]);
 
   return {
@@ -429,6 +484,9 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     restoreTask,
     toggleTaskCompletion,
     getTasksForDate,
+    autoArchiveNeglectedTasks,
+    unarchiveTask,
+    getArchivedTasks,
     importTasks,
     editTask,
     togglePinTask,

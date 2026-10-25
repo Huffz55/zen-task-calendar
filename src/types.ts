@@ -21,6 +21,8 @@ export interface Task {
   focusedSeconds?: number;
   isPinned?: boolean; // One Big Thing / Focus of the Day
   estimatedMinutes?: number; // Estimated duration in minutes
+  isArchived?: boolean; // Auto-archived to Zen Cemetery (Görev Mezarlığı)
+  archivedAt?: string; // YYYY-MM-DD
   updatedAt?: number; // epoch ms for conflict resolution
 }
 
@@ -35,6 +37,7 @@ export interface DailyTask {
   focusedSeconds?: number;
   isPinned?: boolean;
   estimatedMinutes?: number;
+  isArchived?: boolean;
 }
 
 export interface ListItem {

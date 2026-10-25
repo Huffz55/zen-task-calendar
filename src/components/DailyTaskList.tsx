@@ -24,6 +24,7 @@ import {
   Star,
   ArrowRight,
   Copy,
+  Link2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop, playBambooTap, playWaterDrop, playSoftSwoosh, triggerSakuraPetals } from '../utils/audio';
@@ -47,6 +48,20 @@ function formatFocusMinutes(seconds?: number): string {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
   return `${mins}m`;
+}
+
+function extractFirstUrl(text: string): { url: string; displayLabel: string } | null {
+  const match = text.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/i);
+  if (!match) return null;
+  const raw = match[0].replace(/[.,)]+$/, '');
+  const url = raw.startsWith('http') ? raw : `https://${raw}`;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, '');
+    return { url, displayLabel: host || 'Link' };
+  } catch {
+    return { url, displayLabel: 'Link' };
+  }
 }
 
 interface DailyTaskListProps {
@@ -738,6 +753,25 @@ function DailyTaskListComponent({
                               <span>{formatFocusMinutes(task.focusedSeconds)}</span>
                             </span>
                           ) : null}
+
+                          {/* Quick Link Badge (Görev Kapsülü) */}
+                          {(() => {
+                            const linkInfo = extractFirstUrl(task.title);
+                            if (!linkInfo) return null;
+                            return (
+                              <a
+                                href={linkInfo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-pink-200 bg-pink-50/80 text-pink-600 hover:bg-pink-100 hover:text-pink-700 transition-colors shrink-0 max-w-[130px] truncate"
+                                title={`Open ${linkInfo.url}`}
+                              >
+                                <Link2 size={10} />
+                                <span className="truncate">{linkInfo.displayLabel}</span>
+                              </a>
+                            );
+                          })()}
 
                           {/* Subtasks Progress Pill */}
                           {subtasks.length > 0 && (
