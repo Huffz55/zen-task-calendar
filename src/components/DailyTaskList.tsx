@@ -21,9 +21,12 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Star,
+  ArrowRight,
+  Copy,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { playSoftPop } from '../utils/audio';
+import { playSoftPop, playBambooTap, playWaterDrop, playSoftSwoosh, triggerSakuraPetals } from '../utils/audio';
 import { hapticLight, hapticSuccess, hapticCelebration } from '../utils/haptics';
 import { AmbientSoundControl } from './AmbientSoundControl';
 
@@ -50,11 +53,22 @@ interface DailyTaskListProps {
   selectedDate: Date;
   tasks: DailyTask[];
   onToggleTask: (taskId: string, dateStr: string) => void;
-  onAddTask: (title: string, dateStr: string, recurrence: RecurrenceType, tag?: TaskTag, subtasks?: Subtask[]) => void;
+  onAddTask: (
+    title: string,
+    dateStr: string,
+    recurrence: RecurrenceType,
+    tag?: TaskTag,
+    subtasks?: Subtask[],
+    estimatedMinutes?: number,
+    isPinned?: boolean
+  ) => void;
   onDeleteTask: (taskId: string) => void;
   onDeleteTaskInstance?: (taskId: string, dateStr: string) => void;
   onDeleteTaskFuture?: (taskId: string, dateStr: string) => void;
   onEditTask: (taskId: string, newTitle: string) => void;
+  onTogglePin?: (taskId: string) => void;
+  onDeferTask?: (taskId: string, dateStr: string) => void;
+  onDuplicateTask?: (taskId: string, dateStr: string) => void;
   onReorderTasks: (draggedId: string, targetId: string) => void;
   onToggleSubtask?: (taskId: string, subtaskId: string) => void;
   onAddSubtask?: (taskId: string, title: string) => void;
@@ -86,6 +100,9 @@ function DailyTaskListComponent({
   onDeleteTaskInstance,
   onDeleteTaskFuture,
   onEditTask,
+  onTogglePin,
+  onDeferTask,
+  onDuplicateTask,
   onReorderTasks,
   onToggleSubtask,
   onAddSubtask,
@@ -110,6 +127,8 @@ function DailyTaskListComponent({
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
   const [selectedTag, setSelectedTag] = useState<TaskTag | undefined>(undefined);
+  const [newEstimatedMinutes, setNewEstimatedMinutes] = useState<number | undefined>(undefined);
+  const [newIsPinned, setNewIsPinned] = useState(false);
   const [activeTagFilter, setActiveTagFilter] = useState<TaskTag | 'all'>('all');
   const [isRolloverDismissed, setIsRolloverDismissed] = useState(false);
   const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
@@ -135,6 +154,13 @@ function DailyTaskListComponent({
   const completedTasks = tasks.filter(t => t.isCompleted).length;
   const progressPercent = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
   const isPerfectDay = tasks.length > 0 && completedTasks === tasks.length;
+
+  const totalEstimatedMinutes = tasks.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0);
+  const plannedTotalStr = totalEstimatedMinutes > 0
+    ? `⏱️ ${totalEstimatedMinutes >= 60
+        ? `${Math.floor(totalEstimatedMinutes / 60)}h ${totalEstimatedMinutes % 60 > 0 ? `${totalEstimatedMinutes % 60}m` : ''}`.trim()
+        : `${totalEstimatedMinutes}m`} planned`
+    : null;
 
   const availableTags = Array.from(new Set(tasks.map(t => t.tag).filter(Boolean))) as TaskTag[];
   const displayedTasks = activeTagFilter === 'all' 
@@ -182,12 +208,15 @@ function DailyTaskListComponent({
           }))
         : undefined;
 
-    onAddTask(finalTitle || raw, dateStr, recurrence, finalTag, subtaskObjects);
+    playWaterDrop();
+    onAddTask(finalTitle || raw, dateStr, recurrence, finalTag, subtaskObjects, newEstimatedMinutes, newIsPinned);
     setNewTaskTitle('');
     setSelectedTag(undefined);
     setRecurrence('none');
     setNewSubtasks([]);
     setNewSubtaskInput('');
+    setNewEstimatedMinutes(undefined);
+    setNewIsPinned(false);
     setIsAdding(false);
   };
 
@@ -205,19 +234,12 @@ function DailyTaskListComponent({
 
   const handleToggle = (taskId: string, dateString: string, isCompleted: boolean) => {
     if (!isCompleted) {
-      playSoftPop();
+      playBambooTap();
 
       const isLastPending = tasks.filter(t => !t.isCompleted).length === 1;
       if (isLastPending) {
         hapticCelebration();
-        confetti({
-          particleCount: 55,
-          spread: 65,
-          origin: { y: 0.6 },
-          colors: ['#fdf2f8', '#fbcfe8', '#f472b6', '#ffffff'],
-          disableForReducedMotion: false,
-          zIndex: 100
-        });
+        triggerSakuraPetals();
       } else {
         hapticSuccess();
       }
@@ -361,9 +383,16 @@ function DailyTaskListComponent({
                   </span>
                 ) : (
                   <>
-                    <span className="text-xs font-semibold text-gray-700">
-                      {tasks.length > 0 ? `${completedTasks} of ${tasks.length}` : 'No tasks'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-semibold text-gray-700">
+                        {tasks.length > 0 ? `${completedTasks} of ${tasks.length}` : 'No tasks'}
+                      </span>
+                      {plannedTotalStr && (
+                        <span className="text-[10px] font-semibold text-pink-600 bg-pink-50/90 px-2 py-0.5 rounded-full border border-pink-100/80 whitespace-nowrap">
+                          {plannedTotalStr}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-gray-400 font-medium">
                       {tasks.length > 0 ? 'completed' : 'planned'}
                     </span>
@@ -635,7 +664,13 @@ function DailyTaskListComponent({
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, task.taskId)}
                   onDragEnd={() => setDraggedTaskId(null)}
-                  className={`group flex flex-col p-3 md:p-4 rounded-2xl border border-pink-50 hover:bg-pink-50/50 transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${draggedTaskId === task.taskId ? 'opacity-50 border-dashed border-pink-200' : ''}`}
+                  className={`group flex flex-col p-3 md:p-4 rounded-2xl border transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${
+                    draggedTaskId === task.taskId
+                      ? 'opacity-50 border-dashed border-pink-200'
+                      : task.isPinned && !task.isCompleted
+                      ? 'border-amber-300 bg-amber-50/20 hover:bg-amber-50/40 shadow-xs'
+                      : 'border-pink-50 hover:bg-pink-50/50'
+                  }`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
@@ -672,6 +707,22 @@ function DailyTaskListComponent({
                         >
                           <span className="truncate">{renderTaskTitle(task.title)}</span>
                           
+                          {/* Focus of the Day Badge */}
+                          {task.isPinned && !task.isCompleted && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300 bg-amber-100/70 text-amber-700 shrink-0">
+                              <Star size={10} className="fill-amber-500 text-amber-500" />
+                              <span>Focus of the Day</span>
+                            </span>
+                          )}
+
+                          {/* Estimated Duration Badge */}
+                          {task.estimatedMinutes && task.estimatedMinutes > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-pink-100 bg-white/80 text-gray-600 shrink-0">
+                              <span>⏱️</span>
+                              <span>{task.estimatedMinutes >= 60 ? `${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60 ? `${task.estimatedMinutes % 60}m` : ''}`.trim() : `${task.estimatedMinutes}m`}</span>
+                            </span>
+                          )}
+
                           {/* Tag */}
                           {task.tag && TAG_CONFIG[task.tag] && (
                             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${TAG_CONFIG[task.tag].bgClass} ${TAG_CONFIG[task.tag].textClass} ${TAG_CONFIG[task.tag].borderClass}`}>
@@ -720,6 +771,58 @@ function DailyTaskListComponent({
                           title="Focus on this task 🧘"
                         >
                           <Timer size={16} />
+                        </button>
+                      )}
+
+                      {/* Toggle Pin / Focus of the Day */}
+                      {onTogglePin && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hapticLight();
+                            onTogglePin(task.taskId);
+                          }}
+                          className={`opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center transition-all duration-300 rounded-full focus-visible:opacity-100 ${
+                            task.isPinned
+                              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                              : 'text-gray-300 hover:text-amber-400 hover:bg-amber-50'
+                          }`}
+                          title={task.isPinned ? "Unpin task" : "Pin as Focus of the Day ⭐"}
+                        >
+                          <Star size={15} className={task.isPinned ? "fill-amber-500" : ""} />
+                        </button>
+                      )}
+
+                      {/* Defer to Tomorrow */}
+                      {onDeferTask && !task.isCompleted && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hapticLight();
+                            onDeferTask(task.taskId, dateStr);
+                          }}
+                          className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center text-gray-300 hover:text-pink-500 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100"
+                          title="Defer to tomorrow 📅"
+                        >
+                          <ArrowRight size={15} />
+                        </button>
+                      )}
+
+                      {/* Duplicate Task */}
+                      {onDuplicateTask && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hapticLight();
+                            onDuplicateTask(task.taskId, dateStr);
+                          }}
+                          className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center text-gray-300 hover:text-pink-500 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100"
+                          title="Duplicate task 📋"
+                        >
+                          <Copy size={14} />
                         </button>
                       )}
 
@@ -788,7 +891,17 @@ function DailyTaskListComponent({
                         >
                           <button
                             type="button"
-                            onClick={() => onToggleSubtask && onToggleSubtask(task.taskId, subtask.id)}
+                            onClick={() => {
+                              if (onToggleSubtask) {
+                                if (!subtask.isCompleted) {
+                                  playBambooTap();
+                                  hapticSuccess();
+                                } else {
+                                  hapticLight();
+                                }
+                                onToggleSubtask(task.taskId, subtask.id);
+                              }
+                            }}
                             className="flex items-center gap-2 text-left flex-1 min-w-0"
                           >
                             {subtask.isCompleted ? (
@@ -836,6 +949,7 @@ function DailyTaskListComponent({
                               if (e.key === 'Enter') {
                                 e.preventDefault();
                                 if (inlineInput.trim()) {
+                                  playWaterDrop();
                                   onAddSubtask(task.taskId, inlineInput.trim());
                                   setInlineSubtaskInputs(prev => ({ ...prev, [task.taskId]: '' }));
                                 }
@@ -847,6 +961,7 @@ function DailyTaskListComponent({
                             type="button"
                             onClick={() => {
                               if (inlineInput.trim()) {
+                                playWaterDrop();
                                 onAddSubtask(task.taskId, inlineInput.trim());
                                 setInlineSubtaskInputs(prev => ({ ...prev, [task.taskId]: '' }));
                               }
@@ -964,6 +1079,55 @@ function DailyTaskListComponent({
                 </button>
               </div>
             </div>
+
+            {/* Estimated Duration Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-xs text-gray-400 mr-0.5">Est. Time:</span>
+              {[
+                { label: 'None', val: undefined },
+                { label: '15m', val: 15 },
+                { label: '30m', val: 30 },
+                { label: '45m', val: 45 },
+                { label: '1h', val: 60 },
+                { label: '2h', val: 120 },
+              ].map(opt => {
+                const isSelected = newEstimatedMinutes === opt.val;
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => {
+                      hapticLight();
+                      setNewEstimatedMinutes(opt.val);
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all ${
+                      isSelected
+                        ? 'bg-pink-500 text-white border-pink-500 shadow-xs scale-105'
+                        : 'bg-white/80 hover:bg-gray-50 text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Focus of the Day Pin Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                hapticLight();
+                setNewIsPinned(!newIsPinned);
+              }}
+              className={`inline-flex items-center gap-1.5 self-start px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
+                newIsPinned
+                  ? 'bg-amber-100/90 border-amber-300 text-amber-800 shadow-xs'
+                  : 'bg-white/80 border-gray-200 text-gray-500 hover:bg-amber-50/50 hover:text-amber-700'
+              }`}
+            >
+              <Star size={13} className={newIsPinned ? 'fill-amber-500 text-amber-500' : 'text-gray-400'} />
+              <span>Focus of the Day (One Big Thing)</span>
+            </button>
 
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-500 relative">

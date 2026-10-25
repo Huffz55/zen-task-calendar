@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Wind } from 'lucide-react';
-import { playSoftPop } from '../utils/audio';
+import { playSoftPop, playSingingBowl } from '../utils/audio';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 interface ZenBreathingModalProps {
@@ -18,6 +18,7 @@ export function ZenBreathingModal({ isOpen, onClose }: ZenBreathingModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
+    playSingingBowl();
     let isMounted = true;
 
     // 4-4-4 rhythm

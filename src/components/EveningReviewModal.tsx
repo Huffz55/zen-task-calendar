@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Moon, CheckCircle2, Hourglass, Flame, Sparkles } from 'lucide-react';
-import { playSoftPop } from '../utils/audio';
+import { playSoftPop, playSingingBowl, triggerSakuraPetals } from '../utils/audio';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 interface EveningReviewModalProps {
@@ -35,6 +35,13 @@ export function EveningReviewModal({
   overdueCount,
   onRollover,
 }: EveningReviewModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      playSingingBowl();
+      triggerSakuraPetals();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const percent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;

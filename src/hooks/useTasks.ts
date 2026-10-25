@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Task, RecurrenceType, TaskTag, Subtask } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { differenceInDays, parseISO, isValid, subDays, format } from 'date-fns';
+import { differenceInDays, parseISO, isValid, subDays, addDays, format } from 'date-fns';
 import { validateTask } from '../utils/validation';
 
 import { defaultTaskStorage, TASKS_STORAGE_KEY } from '../services/storage/taskStorage';
@@ -92,7 +92,15 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const addTask = useCallback((title: string, date: string, recurrence: RecurrenceType, tag?: TaskTag, subtasks?: Subtask[]) => {
+  const addTask = useCallback((
+    title: string,
+    date: string,
+    recurrence: RecurrenceType = 'none',
+    tag?: TaskTag,
+    subtasks?: Subtask[],
+    estimatedMinutes?: number,
+    isPinned?: boolean
+  ) => {
     const newTask: Task = {
       id: uuidv4(),
       title,
@@ -101,6 +109,8 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       tag,
       completedDates: [],
       subtasks: subtasks && subtasks.length > 0 ? subtasks : undefined,
+      estimatedMinutes: estimatedMinutes && estimatedMinutes > 0 ? estimatedMinutes : undefined,
+      isPinned: isPinned || undefined,
     };
     setTasks(prev => [...prev, newTask]);
   }, []);
@@ -196,7 +206,19 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       tag: task.tag,
       subtasks: task.subtasks,
       focusedSeconds: task.focusedSeconds,
+      isPinned: task.isPinned,
+      estimatedMinutes: task.estimatedMinutes,
     }));
+
+    return mapped.sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+      if (a.isPinned !== b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      return 0;
+    });
   }, [tasks]);
 
   const importTasks = useCallback((importedTasks: unknown) => {
@@ -213,7 +235,14 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     return true;
   }, [storage]);
 
-  const editTask = useCallback((taskId: string, newTitle: string, newTag?: TaskTag, subtasks?: Subtask[]) => {
+  const editTask = useCallback((
+    taskId: string,
+    newTitle: string,
+    newTag?: TaskTag,
+    subtasks?: Subtask[],
+    estimatedMinutes?: number,
+    isPinned?: boolean
+  ) => {
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return {
@@ -221,10 +250,60 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
           title: newTitle.trim(),
           tag: newTag !== undefined ? newTag : t.tag,
           subtasks: subtasks !== undefined ? subtasks : t.subtasks,
+          estimatedMinutes: estimatedMinutes !== undefined ? estimatedMinutes : t.estimatedMinutes,
+          isPinned: isPinned !== undefined ? isPinned : t.isPinned,
         };
       }
       return t;
     }));
+  }, []);
+
+  const togglePinTask = useCallback((taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, isPinned: !t.isPinned };
+      }
+      return t;
+    }));
+  }, []);
+
+  const deferTaskToTomorrow = useCallback((taskId: string, currentDateStr: string) => {
+    const targetDate = parseISO(currentDateStr);
+    if (!isValid(targetDate)) return;
+    const tomorrowStr = format(addDays(targetDate, 1), 'yyyy-MM-dd');
+
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        if (t.recurrence !== 'none') {
+          return {
+            ...t,
+            excludedDates: [...(t.excludedDates || []), currentDateStr],
+          };
+        }
+        return { ...t, date: tomorrowStr };
+      }
+      return t;
+    }));
+  }, []);
+
+  const duplicateTask = useCallback((taskId: string, dateStr: string) => {
+    let duplicated: Task | null = null;
+    setTasks(prev => {
+      const original = prev.find(t => t.id === taskId);
+      if (!original) return prev;
+      duplicated = {
+        ...original,
+        id: uuidv4(),
+        title: `${original.title} (Copy)`,
+        date: dateStr,
+        recurrence: 'none',
+        completedDates: [],
+        subtasks: original.subtasks?.map(s => ({ ...s, id: uuidv4(), isCompleted: false })),
+        isPinned: false,
+      };
+      return [...prev, duplicated];
+    });
+    return duplicated;
   }, []);
 
   const toggleSubtask = useCallback((taskId: string, subtaskId: string) => {
@@ -352,6 +431,9 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     getTasksForDate,
     importTasks,
     editTask,
+    togglePinTask,
+    deferTaskToTomorrow,
+    duplicateTask,
     toggleSubtask,
     addSubtask,
     deleteSubtask,

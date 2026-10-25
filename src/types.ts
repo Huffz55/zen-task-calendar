@@ -19,6 +19,8 @@ export interface Task {
   endDate?: string; // YYYY-MM-DD when this task recurrence ends
   subtasks?: Subtask[];
   focusedSeconds?: number;
+  isPinned?: boolean; // One Big Thing / Focus of the Day
+  estimatedMinutes?: number; // Estimated duration in minutes
   updatedAt?: number; // epoch ms for conflict resolution
 }
 
@@ -31,6 +33,8 @@ export interface DailyTask {
   tag?: TaskTag;
   subtasks?: Subtask[];
   focusedSeconds?: number;
+  isPinned?: boolean;
+  estimatedMinutes?: number;
 }
 
 export interface ListItem {
@@ -59,5 +63,13 @@ export interface FocusSession {
   timestamp: number;
   taskId?: string;
   taskTitle?: string;
+}
+
+export interface ZenMilestone {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
 }
 

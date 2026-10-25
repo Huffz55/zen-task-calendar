@@ -86,6 +86,11 @@ export function validateTask(raw: unknown): Task | null {
     ? Math.floor(candidate.focusedSeconds)
     : undefined;
 
+  const isPinned = Boolean(candidate.isPinned);
+  const estimatedMinutes = typeof candidate.estimatedMinutes === 'number' && candidate.estimatedMinutes > 0
+    ? Math.floor(candidate.estimatedMinutes)
+    : undefined;
+
   return {
     id,
     title,
@@ -97,6 +102,8 @@ export function validateTask(raw: unknown): Task | null {
     endDate,
     subtasks,
     focusedSeconds,
+    isPinned: isPinned || undefined,
+    estimatedMinutes,
   };
 }
 

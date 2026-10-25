@@ -8,8 +8,8 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind } from 'lucide-react';
-import { initAudioContext } from './utils/audio';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award } from 'lucide-react';
+import { initAudioContext, playSingingBowl, playWaterDrop } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
 import { SyncModal } from './components/SyncModal';
@@ -22,6 +22,7 @@ import { AmbientSoundControl } from './components/AmbientSoundControl';
 import { ZenHeatmap } from './components/ZenHeatmap';
 import { ZenBreathingModal } from './components/ZenBreathingModal';
 import { EveningReviewModal } from './components/EveningReviewModal';
+import { ZenMilestonesModal } from './components/ZenMilestonesModal';
 
 interface AppToast {
   type?: 'success' | 'info' | 'error' | 'undo';
@@ -87,11 +88,15 @@ function App() {
     rescheduleTask,
     rolloverOverdueTasks,
     getOverdueTasksCount,
+    togglePinTask,
+    deferTaskToTomorrow,
+    duplicateTask,
   } = useTasks();
 
   const [activeFocusTask, setActiveFocusTask] = useState<{ id: string; title: string } | null>(null);
   const [isZenBreathingOpen, setIsZenBreathingOpen] = useState(false);
   const [isEveningReviewOpen, setIsEveningReviewOpen] = useState(false);
+  const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
 
   const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
 
@@ -122,6 +127,7 @@ function App() {
   const startTaskFocus = useCallback((task: { id: string; title: string }) => {
     setActiveFocusTask(task);
     setActiveTab('focus');
+    playSingingBowl();
     startTimer();
     showToast({
       type: 'success',
@@ -188,6 +194,7 @@ function App() {
   }, []);
 
   const handleSelectDate = useCallback((date: Date) => {
+    playWaterDrop();
     setSelectedDate(prev => {
       if (date > prev) setSlideAnim('left');
       else if (date < prev) setSlideAnim('right');
@@ -534,6 +541,14 @@ function App() {
             <Moon size={15} />
             <span className="hidden sm:inline">Review</span>
           </button>
+          <button
+            onClick={() => setIsMilestonesOpen(true)}
+            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-amber-500 hover:text-amber-600 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
+            title="Zen Milestones & Streaks"
+          >
+            <Award size={15} />
+            <span className="hidden sm:inline">Badges</span>
+          </button>
           <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleThemeChange} />
         </div>
       )}
@@ -624,6 +639,27 @@ function App() {
                 onDeleteTaskInstance={handleDeleteTaskInstance}
                 onDeleteTaskFuture={handleDeleteTaskFuture}
                 onEditTask={editTask}
+                onTogglePin={togglePinTask}
+                onDeferTask={(taskId, dStr) => {
+                  deferTaskToTomorrow(taskId, dStr);
+                  showToast({
+                    type: 'success',
+                    title: 'Deferred to Tomorrow 📅',
+                    message: 'Task moved to tomorrow.',
+                    duration: 3000,
+                  });
+                }}
+                onDuplicateTask={(taskId, dStr) => {
+                  const dup = duplicateTask(taskId, dStr);
+                  if (dup) {
+                    showToast({
+                      type: 'success',
+                      title: 'Task Duplicated 📋',
+                      message: `Created copy of "${dup.title.replace(' (Copy)', '')}"`,
+                      duration: 3000,
+                    });
+                  }
+                }}
                 onReorderTasks={reorderTasks}
                 onToggleSubtask={toggleSubtask}
                 onAddSubtask={addSubtask}
@@ -687,8 +723,11 @@ function App() {
               </div>
             )}
 
-            {/* Zen Timer Big View */}
-            <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center">
+            {/* Zen Timer Big View with Breathing Glow Aura */}
+            <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center overflow-hidden">
+              {isTimerRunning && (
+                <div className="absolute w-80 h-80 rounded-full bg-pink-300/20 blur-3xl animate-pulse pointer-events-none" />
+              )}
               <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-6">
                 <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-pink-400'}`} />
                 <span className="text-xs font-semibold text-pink-600">
@@ -730,7 +769,12 @@ function App() {
                   <RotateCcw size={18} />
                 </button>
                 <button
-                  onClick={toggleTimer}
+                  onClick={() => {
+                    if (!isTimerRunning) {
+                      playSingingBowl();
+                    }
+                    toggleTimer();
+                  }}
                   className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-pink-200"
                   title={isTimerRunning ? 'Pause' : 'Start'}
                 >
@@ -924,6 +968,15 @@ function App() {
       <ZenBreathingModal
         isOpen={isZenBreathingOpen}
         onClose={() => setIsZenBreathingOpen(false)}
+      />
+
+      {/* Zen Milestones Modal */}
+      <ZenMilestonesModal
+        isOpen={isMilestonesOpen}
+        onClose={() => setIsMilestonesOpen(false)}
+        tasks={tasks}
+        currentStreak={currentStreak}
+        totalFocusSeconds={focusStats.totalFocusSeconds}
       />
     </div>
   );
