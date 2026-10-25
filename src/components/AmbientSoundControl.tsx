@@ -10,11 +10,11 @@ import {
   ChevronDown 
 } from 'lucide-react';
 import { 
-  playAmbientSound, 
-  stopAmbientSound, 
+  toggleAmbientSound,
+  stopAllAmbientSounds,
   setAmbientVolume, 
-  getAmbientSound, 
   getAmbientVolume,
+  getActiveAmbientSounds,
   type AmbientSoundType 
 } from '../utils/ambientAudio';
 import { hapticLight } from '../utils/haptics';
@@ -44,7 +44,7 @@ export function AmbientSoundControl({
   align = 'right',
   dropDirection = 'down',
 }: AmbientSoundControlProps = {}) {
-  const [selectedSound, setSelectedSound] = useState<AmbientSoundType>(() => getAmbientSound());
+  const [activeSounds, setActiveSounds] = useState<AmbientSoundType[]>(() => getActiveAmbientSounds());
   const [volume, setVolume] = useState<number>(() => getAmbientVolume());
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,13 +62,14 @@ export function AmbientSoundControl({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const handleSelect = (soundType: AmbientSoundType) => {
+  const handleToggleSound = (soundType: AmbientSoundType) => {
     hapticLight();
-    setSelectedSound(soundType);
     if (soundType === 'none') {
-      stopAmbientSound();
+      stopAllAmbientSounds();
+      setActiveSounds([]);
     } else {
-      playAmbientSound(soundType, volume);
+      toggleAmbientSound(soundType, volume);
+      setActiveSounds(getActiveAmbientSounds());
     }
   };
 
@@ -77,8 +78,16 @@ export function AmbientSoundControl({
     setAmbientVolume(newVolume);
   };
 
-  const currentOption = SOUNDS.find(s => s.type === selectedSound) || SOUNDS[0];
-  const isPlaying = selectedSound !== 'none';
+  const isPlaying = activeSounds.length > 0;
+  const pillLabel = isPlaying
+    ? activeSounds.length === 1
+      ? SOUNDS.find(s => s.type === activeSounds[0])?.label || 'Ambient'
+      : `${activeSounds.length} Sounds Mixed 🎵`
+    : 'Ambient';
+
+  const primaryIcon = isPlaying
+    ? SOUNDS.find(s => s.type === activeSounds[0])?.icon || <Volume2 size={15} />
+    : <VolumeX size={15} />;
 
   return (
     <div className={`relative inline-block ${isOpen ? 'z-50' : 'z-20'}`} ref={containerRef}>
@@ -93,13 +102,13 @@ export function AmbientSoundControl({
             ? 'bg-pink-100/90 text-pink-700 border-pink-200/80 shadow-pink-200/20'
             : 'bg-white/80 hover:bg-pink-50/70 text-gray-500 hover:text-pink-600 border-pink-100/60'
         }`}
-        title="Ambient Focus Sounds"
+        title="Ambient Focus Sounds Mixer"
       >
         <span className={`transition-transform duration-300 ${isPlaying ? 'animate-pulse text-pink-500' : 'text-gray-400'}`}>
-          {currentOption.icon}
+          {primaryIcon}
         </span>
-        <span className="truncate max-w-[85px] sm:max-w-none">
-          {isPlaying ? currentOption.label : 'Ambient'}
+        <span className="truncate max-w-[110px] sm:max-w-none">
+          {pillLabel}
         </span>
         <ChevronDown 
           size={12} 
@@ -121,13 +130,16 @@ export function AmbientSoundControl({
           } w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl border border-pink-100 shadow-[0_20px_50px_rgba(244,114,182,0.22)] p-3 z-50 animate-slide-up-fade`}
         >
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-pink-50">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-pink-400">
-              Focus Ambience
-            </span>
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-pink-400">
+                Ambient Sound Mixer
+              </span>
+              <p className="text-[9px] text-gray-400">Layer multiple sounds together</p>
+            </div>
             {isPlaying && (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                Active
+                {activeSounds.length} Active
               </span>
             )}
           </div>
@@ -135,19 +147,24 @@ export function AmbientSoundControl({
           {/* Sound Presets */}
           <div className="space-y-1 mb-3">
             {SOUNDS.map(sound => {
-              const isSelected = selectedSound === sound.type;
+              const isSelected = sound.type === 'none'
+                ? activeSounds.length === 0
+                : activeSounds.includes(sound.type);
+
               return (
                 <button
                   key={sound.type}
-                  onClick={() => handleSelect(sound.type)}
+                  onClick={() => handleToggleSound(sound.type)}
                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left transition-all duration-200 text-xs cursor-pointer ${
-                    isSelected
+                    isSelected && sound.type !== 'none'
                       ? 'bg-pink-100 text-pink-800 font-semibold shadow-sm'
+                      : sound.type === 'none' && activeSounds.length === 0
+                      ? 'bg-gray-100 text-gray-700 font-medium'
                       : 'hover:bg-pink-50/70 text-gray-600'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`${isSelected ? 'text-pink-600' : 'text-gray-400'}`}>
+                    <span className={`${isSelected && sound.type !== 'none' ? 'text-pink-600' : 'text-gray-400'}`}>
                       {sound.icon}
                     </span>
                     <div>
@@ -155,8 +172,10 @@ export function AmbientSoundControl({
                       <div className="text-[10px] opacity-70 font-normal leading-tight">{sound.sublabel}</div>
                     </div>
                   </div>
-                  {isSelected && (
-                    <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+                  {isSelected && sound.type !== 'none' && (
+                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-pink-500 text-white text-[10px] font-bold">
+                      ✓
+                    </span>
                   )}
                 </button>
               );

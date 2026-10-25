@@ -14,6 +14,14 @@ export interface DayFocusStat {
   isToday: boolean;
 }
 
+export interface HeatmapDay {
+  dateStr: string;
+  dayOfWeek: number; // 0-6 (Sun-Sat)
+  seconds: number;
+  level: number; // 0..4
+  isToday: boolean;
+}
+
 export function useFocusStats() {
   const [sessions, setSessions] = useState<FocusSession[]>(() => defaultFocusStorage.loadSessions());
 
@@ -31,7 +39,7 @@ export function useFocusStats() {
   }, []);
 
   const recordSession = useCallback(
-    (durationSeconds: number) => {
+    (durationSeconds: number, taskId?: string, taskTitle?: string) => {
       if (durationSeconds <= 0) return;
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const newSession: FocusSession = {
@@ -39,6 +47,8 @@ export function useFocusStats() {
         date: todayStr,
         durationSeconds,
         timestamp: Date.now(),
+        taskId,
+        taskTitle,
       };
       saveSessions([newSession, ...sessions]);
     },
@@ -50,11 +60,14 @@ export function useFocusStats() {
     let totalSeconds = 0;
     let todaySeconds = 0;
 
+    const dateMap = new Map<string, number>();
+
     for (const s of sessions) {
       totalSeconds += s.durationSeconds;
       if (s.date === todayStr) {
         todaySeconds += s.durationSeconds;
       }
+      dateMap.set(s.date, (dateMap.get(s.date) || 0) + s.durationSeconds);
     }
 
     const days: DayFocusStat[] = [];
@@ -65,10 +78,7 @@ export function useFocusStats() {
       const dStr = format(d, 'yyyy-MM-dd');
       const dayIndex = d.getDay();
       const dayName = WEEK_DAYS[dayIndex];
-
-      const daySecs = sessions
-        .filter(s => s.date === dStr)
-        .reduce((sum, s) => sum + s.durationSeconds, 0);
+      const daySecs = dateMap.get(dStr) || 0;
 
       days.push({
         dayName,
@@ -80,12 +90,34 @@ export function useFocusStats() {
 
     const maxDaySeconds = Math.max(1, ...days.map(d => d.seconds));
 
+    // 12 Weeks (84 days) Activity Matrix
+    const heatmapDays: HeatmapDay[] = [];
+    for (let i = 83; i >= 0; i--) {
+      const d = subDays(new Date(), i);
+      const dStr = format(d, 'yyyy-MM-dd');
+      const daySecs = dateMap.get(dStr) || 0;
+      let level = 0;
+      if (daySecs >= 5400) level = 4; // 90m+
+      else if (daySecs >= 3000) level = 3; // 50m+
+      else if (daySecs >= 1500) level = 2; // 25m+
+      else if (daySecs > 0) level = 1; // 1m+
+
+      heatmapDays.push({
+        dateStr: dStr,
+        dayOfWeek: d.getDay(),
+        seconds: daySecs,
+        level,
+        isToday: i === 0,
+      });
+    }
+
     return {
       totalFocusSeconds: totalSeconds,
       totalSessionsCount: sessions.length,
       todayFocusSeconds: todaySeconds,
       weeklyDays: days,
       maxDaySeconds,
+      heatmapDays,
     };
   }, [sessions]);
 

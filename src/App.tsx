@@ -8,7 +8,7 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind } from 'lucide-react';
 import { initAudioContext } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
@@ -19,6 +19,9 @@ import { useShortcuts } from './hooks/useShortcuts';
 import { useFocusStats } from './hooks/useFocusStats';
 import { FocusAnalyticsCard } from './components/FocusAnalyticsCard';
 import { AmbientSoundControl } from './components/AmbientSoundControl';
+import { ZenHeatmap } from './components/ZenHeatmap';
+import { ZenBreathingModal } from './components/ZenBreathingModal';
+import { EveningReviewModal } from './components/EveningReviewModal';
 
 interface AppToast {
   type?: 'success' | 'info' | 'error' | 'undo';
@@ -65,31 +68,6 @@ function App() {
     });
   }, []);
 
-  const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
-
-  const {
-    timeLeft,
-    initialTime,
-    isTimerRunning,
-    isZenMode,
-    toggleZenMode,
-    toggleTimer,
-    resetTimer,
-    adjustTime,
-    setTimerMinutes,
-    finishEarlySession,
-  } = useZenTimer(25, recordFocusSession);
-
-  useShortcuts({
-    onToggleZen: toggleZenMode,
-    onGoToToday: () => setSelectedDate(new Date()),
-  });
-
-  const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
-  const [showOfflineReady, setShowOfflineReady] = useState(false);
-  const [currentHour, setCurrentHour] = useState(new Date().getHours());
-  const [activeTab, setActiveTab] = useState<'tasks' | 'lists' | 'focus'>('tasks');
-
   const { 
     tasks, 
     addTask, 
@@ -101,11 +79,68 @@ function App() {
     getTasksForDate, 
     importTasks, 
     editTask, 
+    toggleSubtask,
+    addSubtask,
+    deleteSubtask,
+    addTaskFocusTime,
     reorderTasks, 
     rescheduleTask,
     rolloverOverdueTasks,
     getOverdueTasksCount,
   } = useTasks();
+
+  const [activeFocusTask, setActiveFocusTask] = useState<{ id: string; title: string } | null>(null);
+  const [isZenBreathingOpen, setIsZenBreathingOpen] = useState(false);
+  const [isEveningReviewOpen, setIsEveningReviewOpen] = useState(false);
+
+  const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
+
+  const handleTimerComplete = useCallback((durationSeconds: number) => {
+    if (activeFocusTask) {
+      addTaskFocusTime(activeFocusTask.id, durationSeconds);
+      recordFocusSession(durationSeconds, activeFocusTask.id, activeFocusTask.title);
+    } else {
+      recordFocusSession(durationSeconds);
+    }
+    setIsZenBreathingOpen(true);
+  }, [activeFocusTask, addTaskFocusTime, recordFocusSession]);
+
+  const {
+    timeLeft,
+    initialTime,
+    isTimerRunning,
+    isZenMode,
+    toggleZenMode,
+    startTimer,
+    toggleTimer,
+    resetTimer,
+    adjustTime,
+    setTimerMinutes,
+    finishEarlySession,
+  } = useZenTimer(25, handleTimerComplete);
+
+  const startTaskFocus = useCallback((task: { id: string; title: string }) => {
+    setActiveFocusTask(task);
+    setActiveTab('focus');
+    startTimer();
+    showToast({
+      type: 'success',
+      title: 'Deep Focus 🧘',
+      message: `Timer started for "${task.title}"`,
+      duration: 3000,
+    });
+  }, [startTimer, showToast]);
+
+  useShortcuts({
+    onToggleZen: toggleZenMode,
+    onGoToToday: () => setSelectedDate(new Date()),
+  });
+
+  const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
+  const [showOfflineReady, setShowOfflineReady] = useState(false);
+  const [currentHour, setCurrentHour] = useState(new Date().getHours());
+  const [activeTab, setActiveTab] = useState<'tasks' | 'lists' | 'focus'>('tasks');
+
   const { lists, addList, deleteList, restoreList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
   const [todayDateStr, setTodayDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
 
@@ -491,6 +526,14 @@ function App() {
             <Cloud size={16} />
             <span className="hidden sm:inline">Sync</span>
           </button>
+          <button
+            onClick={() => setIsEveningReviewOpen(true)}
+            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-pink-500 hover:text-pink-600 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
+            title="Evening Review & Wind Down"
+          >
+            <Moon size={15} />
+            <span className="hidden sm:inline">Review</span>
+          </button>
           <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleThemeChange} />
         </div>
       )}
@@ -582,6 +625,10 @@ function App() {
                 onDeleteTaskFuture={handleDeleteTaskFuture}
                 onEditTask={editTask}
                 onReorderTasks={reorderTasks}
+                onToggleSubtask={toggleSubtask}
+                onAddSubtask={addSubtask}
+                onDeleteSubtask={deleteSubtask}
+                onStartFocus={startTaskFocus}
                 isZenMode={isZenMode}
                 onToggleZenMode={toggleZenMode}
                 timeLeft={timeLeft}
@@ -620,6 +667,26 @@ function App() {
           ${activeTab === 'focus' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           <div className="w-full max-w-2xl h-auto flex flex-col gap-6 py-2 px-1">
+            {/* Active Focus Target Banner */}
+            {activeFocusTask && (
+              <div className="w-full bg-pink-50/90 border border-pink-200/80 rounded-2xl p-3 px-4 flex items-center justify-between gap-3 animate-slide-up-fade shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-base select-none">🎯</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-pink-600 uppercase tracking-wider">Active Focus Task</p>
+                    <h4 className="text-sm font-semibold text-gray-800 truncate">{activeFocusTask.title}</h4>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveFocusTask(null)}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-white/80 transition-colors"
+                  title="Unlink task"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+
             {/* Zen Timer Big View */}
             <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center">
               <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-6">
@@ -705,6 +772,18 @@ function App() {
               </div>
             </div>
 
+            {/* Mindful Breathing Break Trigger */}
+            <div className="flex justify-center -my-2">
+              <button
+                onClick={() => setIsZenBreathingOpen(true)}
+                className="px-4 py-2 bg-white/70 hover:bg-pink-50 border border-pink-100 rounded-2xl text-xs font-semibold text-pink-600 transition-all shadow-xs flex items-center gap-2 hover:scale-105 active:scale-95"
+              >
+                <Wind size={15} className="text-pink-400" />
+                <span>Take a Zen Break (4-4-4 Breathing)</span>
+                <span>🌸</span>
+              </button>
+            </div>
+
             {/* Weekly Focus Analytics Card */}
             <div className="relative z-10">
               <FocusAnalyticsCard
@@ -714,6 +793,11 @@ function App() {
                 weeklyDays={focusStats.weeklyDays}
                 maxDaySeconds={focusStats.maxDaySeconds}
               />
+            </div>
+
+            {/* Zen 12-Week Heatmap Matrix */}
+            <div className="relative z-10">
+              <ZenHeatmap days={focusStats.heatmapDays || []} />
             </div>
           </div>
         </div>
@@ -822,6 +906,24 @@ function App() {
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
         onShowToast={showToast}
+      />
+
+      {/* Evening Review Modal */}
+      <EveningReviewModal
+        isOpen={isEveningReviewOpen}
+        onClose={() => setIsEveningReviewOpen(false)}
+        completedTasks={dailyTasks.filter(t => t.isCompleted).length}
+        totalTasks={dailyTasks.length}
+        focusSeconds={focusStats.todayFocusSeconds}
+        currentStreak={currentStreak}
+        overdueCount={overdueCount}
+        onRollover={handleRollover}
+      />
+
+      {/* Zen Breathing Modal */}
+      <ZenBreathingModal
+        isOpen={isZenBreathingOpen}
+        onClose={() => setIsZenBreathingOpen(false)}
       />
     </div>
   );

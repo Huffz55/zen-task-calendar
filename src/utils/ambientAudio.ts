@@ -6,16 +6,151 @@ interface ActiveAmbient {
   sourceNode: AudioBufferSourceNode;
   gainNode: GainNode;
   type: AmbientSoundType;
+  volume: number;
 }
 
-let activeAmbient: ActiveAmbient | null = null;
-let currentVolume = 0.35;
-let currentType: AmbientSoundType = 'none';
-let fadeTimeoutId: ReturnType<typeof setTimeout> | null = null;
+const activeAmbients = new Map<AmbientSoundType, ActiveAmbient>();
+let masterVolume = 0.35;
 
-// Audio buffer caches for high performance, zero latency & 100% offline PWA
-const bufferCache: Partial<Record<AmbientSoundType, AudioBuffer>> = {};
-let cachedSampleRate = 0;
+export function getAmbientVolume(): number {
+  return masterVolume;
+}
+
+export function getAmbientSound(): AmbientSoundType {
+  const active = Array.from(activeAmbients.keys());
+  return active.length > 0 ? active[active.length - 1] : 'none';
+}
+
+export function getActiveAmbientSounds(): AmbientSoundType[] {
+  return Array.from(activeAmbients.keys());
+}
+
+export function isAmbientSoundActive(type: AmbientSoundType): boolean {
+  return activeAmbients.has(type);
+}
+
+export function stopAmbientSound(type?: AmbientSoundType, fadeTimeMs = 300) {
+  if (!type || type === 'none') {
+    stopAllAmbientSounds(fadeTimeMs);
+    return;
+  }
+
+  const existing = activeAmbients.get(type);
+  if (!existing) return;
+
+  try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'running') {
+      const now = ctx.currentTime;
+      existing.gainNode.gain.cancelScheduledValues(now);
+      existing.gainNode.gain.linearRampToValueAtTime(0.0001, now + fadeTimeMs / 1000);
+      setTimeout(() => {
+        try {
+          existing.sourceNode.stop();
+          existing.sourceNode.disconnect();
+          existing.gainNode.disconnect();
+        } catch {}
+      }, fadeTimeMs + 50);
+    } else {
+      try { existing.sourceNode.stop(); } catch {}
+    }
+  } catch {
+    try { existing.sourceNode.stop(); } catch {}
+  }
+
+  activeAmbients.delete(type);
+}
+
+export function stopAllAmbientSounds(fadeTimeMs = 300) {
+  const types = Array.from(activeAmbients.keys());
+  for (const t of types) {
+    stopAmbientSound(t, fadeTimeMs);
+  }
+}
+
+export function setAmbientVolume(volume: number, type?: AmbientSoundType) {
+  const cleanVol = Math.max(0, Math.min(1, volume));
+  if (!type) {
+    masterVolume = cleanVol;
+    const ctx = getAudioContext();
+    if (ctx) {
+      const now = ctx.currentTime;
+      for (const item of activeAmbients.values()) {
+        item.gainNode.gain.cancelScheduledValues(now);
+        item.gainNode.gain.linearRampToValueAtTime(masterVolume, now + 0.08);
+      }
+    }
+    return;
+  }
+
+  const existing = activeAmbients.get(type);
+  if (existing) {
+    existing.volume = cleanVol;
+    const ctx = getAudioContext();
+    if (ctx) {
+      const now = ctx.currentTime;
+      existing.gainNode.gain.cancelScheduledValues(now);
+      existing.gainNode.gain.linearRampToValueAtTime(cleanVol, now + 0.08);
+    }
+  }
+}
+
+export function toggleAmbientSound(type: AmbientSoundType, volume = masterVolume): boolean {
+  if (type === 'none') {
+    stopAllAmbientSounds();
+    return false;
+  }
+
+  if (activeAmbients.has(type)) {
+    stopAmbientSound(type);
+    return false;
+  } else {
+    startAmbientTrack(type, volume);
+    return true;
+  }
+}
+
+function startAmbientTrack(type: AmbientSoundType, volume = masterVolume) {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume();
+  }
+
+  const buffer = getSoundBuffer(ctx, type);
+  if (!buffer) return;
+
+  const now = ctx.currentTime;
+  const gainNode = ctx.createGain();
+  gainNode.gain.setValueAtTime(0.0001, now);
+  gainNode.connect(ctx.destination);
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+
+  source.connect(gainNode);
+  source.start(now);
+
+  gainNode.gain.linearRampToValueAtTime(volume, now + 0.8);
+
+  activeAmbients.set(type, {
+    sourceNode: source,
+    gainNode,
+    type,
+    volume,
+  });
+}
+
+export function playAmbientSound(type: AmbientSoundType, volume = masterVolume) {
+  if (type === 'none') {
+    stopAllAmbientSounds();
+    return;
+  }
+
+  // If another track is playing alone, we can toggle or add
+  toggleAmbientSound(type, volume);
+}
 
 // Helper: Smoothly crossfade start and end of audio channels to guarantee 0-click seamless looping
 function crossfadeLoop(left: Float32Array, right: Float32Array, length: number, fadeSamples: number) {
@@ -313,109 +448,4 @@ function getSoundBuffer(ctx: AudioContext, type: AmbientSoundType): AudioBuffer 
 
   bufferCache[type] = buf;
   return buf;
-}
-
-export function stopAmbientSound(fadeTimeMs = 500) {
-  if (fadeTimeoutId) {
-    clearTimeout(fadeTimeoutId);
-    fadeTimeoutId = null;
-  }
-
-  if (!activeAmbient) {
-    currentType = 'none';
-    return;
-  }
-
-  const { sourceNode, gainNode } = activeAmbient;
-  const ctx = getAudioContext();
-
-  if (ctx && ctx.state !== 'closed') {
-    const now = ctx.currentTime;
-    const fadeDuration = fadeTimeMs / 1000;
-
-    try {
-      gainNode.gain.cancelScheduledValues(now);
-      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-      gainNode.gain.linearRampToValueAtTime(0.0001, now + fadeDuration);
-
-      fadeTimeoutId = setTimeout(() => {
-        try {
-          sourceNode.stop();
-          sourceNode.disconnect();
-          gainNode.disconnect();
-        } catch {}
-        fadeTimeoutId = null;
-      }, fadeTimeMs + 50);
-    } catch {
-      try { sourceNode.stop(); } catch {}
-    }
-  }
-
-  activeAmbient = null;
-  currentType = 'none';
-}
-
-export function setAmbientVolume(volume: number) {
-  currentVolume = Math.max(0, Math.min(1, volume));
-  if (activeAmbient) {
-    const ctx = getAudioContext();
-    if (ctx) {
-      const now = ctx.currentTime;
-      activeAmbient.gainNode.gain.cancelScheduledValues(now);
-      activeAmbient.gainNode.gain.linearRampToValueAtTime(currentVolume, now + 0.08);
-    }
-  }
-}
-
-export function getAmbientVolume(): number {
-  return currentVolume;
-}
-
-export function getAmbientSound(): AmbientSoundType {
-  return currentType;
-}
-
-export function playAmbientSound(type: AmbientSoundType, volume = currentVolume) {
-  if (type === 'none') {
-    stopAmbientSound();
-    return;
-  }
-
-  const ctx = getAudioContext();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') {
-    ctx.resume();
-  }
-
-  // Smoothly fade out previous sound if one is currently playing
-  if (activeAmbient) {
-    stopAmbientSound(200);
-  }
-
-  currentVolume = volume;
-  currentType = type;
-
-  const buffer = getSoundBuffer(ctx, type);
-  if (!buffer) return;
-
-  const now = ctx.currentTime;
-  const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.0001, now);
-  masterGain.connect(ctx.destination);
-
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.loop = true;
-
-  source.connect(masterGain);
-  source.start(now);
-
-  // Smooth 1.0s fade-in
-  masterGain.gain.linearRampToValueAtTime(currentVolume, now + 1.0);
-
-  activeAmbient = {
-    sourceNode: source,
-    gainNode: masterGain,
-    type,
-  };
 }

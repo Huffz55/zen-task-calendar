@@ -2,6 +2,12 @@ export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'biweekly';
 
 export type TaskTag = 'work' | 'personal' | 'health' | 'ideas' | 'priority';
 
+export interface Subtask {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -11,6 +17,8 @@ export interface Task {
   completedDates: string[]; // List of YYYY-MM-DD when this task was completed
   excludedDates?: string[]; // List of YYYY-MM-DD when this task was skipped/deleted for that specific day
   endDate?: string; // YYYY-MM-DD when this task recurrence ends
+  subtasks?: Subtask[];
+  focusedSeconds?: number;
   updatedAt?: number; // epoch ms for conflict resolution
 }
 
@@ -21,6 +29,8 @@ export interface DailyTask {
   taskId: string;
   recurrence: RecurrenceType;
   tag?: TaskTag;
+  subtasks?: Subtask[];
+  focusedSeconds?: number;
 }
 
 export interface ListItem {
@@ -47,5 +57,7 @@ export interface FocusSession {
   date: string; // YYYY-MM-DD
   durationSeconds: number;
   timestamp: number;
+  taskId?: string;
+  taskTitle?: string;
 }
 

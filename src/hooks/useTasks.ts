@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Task, RecurrenceType, TaskTag } from '../types';
+import type { Task, RecurrenceType, TaskTag, Subtask } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { differenceInDays, parseISO, isValid, subDays, format } from 'date-fns';
 import { validateTask } from '../utils/validation';
@@ -92,7 +92,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const addTask = useCallback((title: string, date: string, recurrence: RecurrenceType, tag?: TaskTag) => {
+  const addTask = useCallback((title: string, date: string, recurrence: RecurrenceType, tag?: TaskTag, subtasks?: Subtask[]) => {
     const newTask: Task = {
       id: uuidv4(),
       title,
@@ -100,6 +100,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       recurrence,
       tag,
       completedDates: [],
+      subtasks: subtasks && subtasks.length > 0 ? subtasks : undefined,
     };
     setTasks(prev => [...prev, newTask]);
   }, []);
@@ -193,6 +194,8 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       isCompleted: (Array.isArray(task.completedDates) ? task.completedDates : []).includes(dateStr),
       recurrence: task.recurrence,
       tag: task.tag,
+      subtasks: task.subtasks,
+      focusedSeconds: task.focusedSeconds,
     }));
   }, [tasks]);
 
@@ -210,8 +213,68 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     return true;
   }, [storage]);
 
-  const editTask = useCallback((taskId: string, newTitle: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title: newTitle } : t));
+  const editTask = useCallback((taskId: string, newTitle: string, newTag?: TaskTag, subtasks?: Subtask[]) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          title: newTitle.trim(),
+          tag: newTag !== undefined ? newTag : t.tag,
+          subtasks: subtasks !== undefined ? subtasks : t.subtasks,
+        };
+      }
+      return t;
+    }));
+  }, []);
+
+  const toggleSubtask = useCallback((taskId: string, subtaskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId && t.subtasks) {
+        const updatedSubs = t.subtasks.map(s =>
+          s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
+        );
+        return { ...t, subtasks: updatedSubs };
+      }
+      return t;
+    }));
+  }, []);
+
+  const addSubtask = useCallback((taskId: string, title: string) => {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return;
+    const newSub: Subtask = {
+      id: uuidv4(),
+      title: cleanTitle,
+      isCompleted: false,
+    };
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, subtasks: [...(t.subtasks || []), newSub] };
+      }
+      return t;
+    }));
+  }, []);
+
+  const deleteSubtask = useCallback((taskId: string, subtaskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId && t.subtasks) {
+        return { ...t, subtasks: t.subtasks.filter(s => s.id !== subtaskId) };
+      }
+      return t;
+    }));
+  }, []);
+
+  const addTaskFocusTime = useCallback((taskId: string, seconds: number) => {
+    if (seconds <= 0) return;
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          focusedSeconds: (t.focusedSeconds || 0) + seconds,
+        };
+      }
+      return t;
+    }));
   }, []);
 
   const reorderTasks = useCallback((draggedId: string, targetId: string) => {
@@ -289,6 +352,10 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     getTasksForDate,
     importTasks,
     editTask,
+    toggleSubtask,
+    addSubtask,
+    deleteSubtask,
+    addTaskFocusTime,
     reorderTasks,
     rescheduleTask,
     rolloverOverdueTasks,

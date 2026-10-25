@@ -1,7 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import type { DailyTask, RecurrenceType, TaskTag } from '../types';
-import { CheckCircle2, Circle, Plus, Trash2, Maximize2, Minimize2, GripVertical, Play, Pause, RotateCcw, Minus, Pencil } from 'lucide-react';
+import type { DailyTask, RecurrenceType, TaskTag, Subtask } from '../types';
+import {
+  CheckCircle2,
+  Circle,
+  Plus,
+  Trash2,
+  Maximize2,
+  Minimize2,
+  GripVertical,
+  Play,
+  Pause,
+  RotateCcw,
+  Minus,
+  Pencil,
+  Timer,
+  ListTodo,
+  CheckSquare,
+  Square,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop } from '../utils/audio';
 import { hapticLight, hapticSuccess, hapticCelebration } from '../utils/haptics';
@@ -15,16 +35,31 @@ export const TAG_CONFIG: Record<TaskTag, { label: string; icon: string; bgClass:
   priority: { label: 'Priority', icon: '⭐', bgClass: 'bg-rose-50/90', textClass: 'text-rose-600', borderClass: 'border-rose-100' },
 };
 
+function formatFocusMinutes(seconds?: number): string {
+  if (!seconds || seconds <= 0) return '';
+  const mins = Math.round(seconds / 60);
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${mins}m`;
+}
+
 interface DailyTaskListProps {
   selectedDate: Date;
   tasks: DailyTask[];
   onToggleTask: (taskId: string, dateStr: string) => void;
-  onAddTask: (title: string, dateStr: string, recurrence: RecurrenceType, tag?: TaskTag) => void;
+  onAddTask: (title: string, dateStr: string, recurrence: RecurrenceType, tag?: TaskTag, subtasks?: Subtask[]) => void;
   onDeleteTask: (taskId: string) => void;
   onDeleteTaskInstance?: (taskId: string, dateStr: string) => void;
   onDeleteTaskFuture?: (taskId: string, dateStr: string) => void;
   onEditTask: (taskId: string, newTitle: string) => void;
   onReorderTasks: (draggedId: string, targetId: string) => void;
+  onToggleSubtask?: (taskId: string, subtaskId: string) => void;
+  onAddSubtask?: (taskId: string, title: string) => void;
+  onDeleteSubtask?: (taskId: string, subtaskId: string) => void;
+  onStartFocus?: (task: { id: string; title: string }) => void;
   isZenMode?: boolean;
   onToggleZenMode?: () => void;
   timeLeft?: number;
@@ -52,6 +87,10 @@ function DailyTaskListComponent({
   onDeleteTaskFuture,
   onEditTask,
   onReorderTasks,
+  onToggleSubtask,
+  onAddSubtask,
+  onDeleteSubtask,
+  onStartFocus,
   isZenMode,
   onToggleZenMode,
   timeLeft = 25 * 60,
@@ -75,6 +114,10 @@ function DailyTaskListComponent({
   const [isRolloverDismissed, setIsRolloverDismissed] = useState(false);
   const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
+  const [newSubtaskInput, setNewSubtaskInput] = useState('');
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Record<string, boolean>>({});
+  const [inlineSubtaskInputs, setInlineSubtaskInputs] = useState<Record<string, string>>({});
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const isViewingToday = dateStr === todayStr;
@@ -130,10 +173,21 @@ function DailyTaskListComponent({
       finalTitle = raw.replace(tagMatch[0], '').trim();
     }
 
-    onAddTask(finalTitle || raw, dateStr, recurrence, finalTag);
+    const subtaskObjects: Subtask[] | undefined =
+      newSubtasks.length > 0
+        ? newSubtasks.map(t => ({
+            id: Math.random().toString(36).substring(2, 9),
+            title: t,
+            isCompleted: false,
+          }))
+        : undefined;
+
+    onAddTask(finalTitle || raw, dateStr, recurrence, finalTag, subtaskObjects);
     setNewTaskTitle('');
     setSelectedTag(undefined);
     setRecurrence('none');
+    setNewSubtasks([]);
+    setNewSubtaskInput('');
     setIsAdding(false);
   };
 
@@ -563,90 +617,251 @@ function DailyTaskListComponent({
           </div>
         ) : (
           <ul className="space-y-3">
-            {displayedTasks.map(task => (
-              <li 
-                key={task.id} 
-                draggable
-                onDragStart={(e) => {
-                  handleDragStart(e, task.taskId);
-                  e.dataTransfer.setData('text/plain', task.taskId);
-                }}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, task.taskId)}
-                onDragEnd={() => setDraggedTaskId(null)}
-                className={`group flex items-center justify-between p-3 md:p-4 rounded-2xl border border-pink-50 hover:bg-pink-50/50 transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${draggedTaskId === task.taskId ? 'opacity-50 border-dashed border-pink-200' : ''}`}
-              >
-                <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
-                  <div className="text-pink-100 hover:text-pink-300 cursor-grab active:cursor-grabbing px-1 touch-none hidden md:block">
-                    <GripVertical size={16} />
-                  </div>
-                  
-                  <button 
-                    onClick={() => handleToggle(task.taskId, dateStr, task.isCompleted)}
-                    className={`relative transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px] hover:scale-105 active:scale-90
-                    ${task.isCompleted 
-                      ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
-                      : 'text-gray-300 group-hover:text-pink-200'
-                    }`}
-                  >
-                    {task.isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                  </button>
-                  
-                  {editingTaskId === task.taskId ? (
-                    <input
-                      type="text"
-                      autoFocus
-                      maxLength={250}
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onKeyDown={(e) => handleEditKeyDown(e, task.taskId)}
-                      onBlur={() => saveEdit(task.taskId)}
-                      className="text-base md:text-lg bg-transparent border-b border-pink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded text-gray-700 flex-1 truncate py-2"
-                    />
-                  ) : (
-                    <span 
-                      onDoubleClick={() => handleDoubleClick(task.taskId, task.title)}
-                      className={`text-base md:text-lg transition-all duration-300 flex-1 truncate cursor-text select-none py-2 flex items-center gap-2 ${task.isCompleted ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}
-                    >
-                      <span className="truncate">{renderTaskTitle(task.title)}</span>
-                      {task.tag && TAG_CONFIG[task.tag] && (
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${TAG_CONFIG[task.tag].bgClass} ${TAG_CONFIG[task.tag].textClass} ${TAG_CONFIG[task.tag].borderClass}`}>
-                          <span>{TAG_CONFIG[task.tag].icon}</span>
-                          <span className="hidden sm:inline">{TAG_CONFIG[task.tag].label}</span>
+            {displayedTasks.map(task => {
+              const subtasks = task.subtasks || [];
+              const completedSubtasks = subtasks.filter(s => s.isCompleted).length;
+              const subtaskPercent = subtasks.length > 0 ? (completedSubtasks / subtasks.length) * 100 : 0;
+              const isExpanded = !!expandedTaskIds[task.taskId];
+              const inlineInput = inlineSubtaskInputs[task.taskId] || '';
+
+              return (
+                <li 
+                  key={task.id} 
+                  draggable
+                  onDragStart={(e) => {
+                    handleDragStart(e, task.taskId);
+                    e.dataTransfer.setData('text/plain', task.taskId);
+                  }}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, task.taskId)}
+                  onDragEnd={() => setDraggedTaskId(null)}
+                  className={`group flex flex-col p-3 md:p-4 rounded-2xl border border-pink-50 hover:bg-pink-50/50 transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${draggedTaskId === task.taskId ? 'opacity-50 border-dashed border-pink-200' : ''}`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
+                      <div className="text-pink-100 hover:text-pink-300 cursor-grab active:cursor-grabbing px-1 touch-none hidden md:block">
+                        <GripVertical size={16} />
+                      </div>
+                      
+                      <button 
+                        onClick={() => handleToggle(task.taskId, dateStr, task.isCompleted)}
+                        className={`relative transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px] hover:scale-105 active:scale-90
+                        ${task.isCompleted 
+                          ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
+                          : 'text-gray-300 group-hover:text-pink-200'
+                        }`}
+                      >
+                        {task.isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                      </button>
+                      
+                      {editingTaskId === task.taskId ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          maxLength={250}
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, task.taskId)}
+                          onBlur={() => saveEdit(task.taskId)}
+                          className="text-base md:text-lg bg-transparent border-b border-pink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded text-gray-700 flex-1 truncate py-2"
+                        />
+                      ) : (
+                        <span 
+                          onDoubleClick={() => handleDoubleClick(task.taskId, task.title)}
+                          className={`text-base md:text-lg transition-all duration-300 flex-1 truncate cursor-text select-none py-2 flex items-center gap-2 flex-wrap ${task.isCompleted ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}
+                        >
+                          <span className="truncate">{renderTaskTitle(task.title)}</span>
+                          
+                          {/* Tag */}
+                          {task.tag && TAG_CONFIG[task.tag] && (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${TAG_CONFIG[task.tag].bgClass} ${TAG_CONFIG[task.tag].textClass} ${TAG_CONFIG[task.tag].borderClass}`}>
+                              <span>{TAG_CONFIG[task.tag].icon}</span>
+                              <span className="hidden sm:inline">{TAG_CONFIG[task.tag].label}</span>
+                            </span>
+                          )}
+
+                          {/* Focus Time Badge */}
+                          {task.focusedSeconds && task.focusedSeconds > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-pink-200 bg-pink-50 text-pink-600 shrink-0" title="Time spent focusing on this task">
+                              <span>⏱️</span>
+                              <span>{formatFocusMinutes(task.focusedSeconds)}</span>
+                            </span>
+                          ) : null}
+
+                          {/* Subtasks Progress Pill */}
+                          {subtasks.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedTaskIds(prev => ({ ...prev, [task.taskId]: !prev[task.taskId] }));
+                              }}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-pink-100 bg-pink-50/60 text-gray-600 hover:bg-pink-100/60 transition-colors shrink-0"
+                            >
+                              <ListTodo size={11} className="text-pink-400" />
+                              <span>{completedSubtasks}/{subtasks.length}</span>
+                              {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                            </button>
+                          )}
                         </span>
                       )}
-                    </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {/* Quick Focus Button */}
+                      {onStartFocus && !task.isCompleted && (
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            hapticSuccess();
+                            onStartFocus({ id: task.taskId, title: task.title });
+                          }}
+                          className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center text-pink-400 hover:text-pink-600 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100"
+                          title="Focus on this task 🧘"
+                        >
+                          <Timer size={16} />
+                        </button>
+                      )}
+
+                      {/* Add / Toggle Subtasks */}
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation();
+                          setExpandedTaskIds(prev => ({ ...prev, [task.taskId]: !prev[task.taskId] }));
+                        }}
+                        className={`opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center transition-all duration-300 rounded-full focus-visible:opacity-100 ${
+                          subtasks.length > 0
+                            ? 'text-pink-300 hover:text-pink-500 hover:bg-pink-50'
+                            : 'text-gray-300 hover:text-pink-400 hover:bg-pink-50'
+                        }`}
+                        title={subtasks.length > 0 ? "Toggle checklist" : "Add checklist"}
+                      >
+                        <ListTodo size={15} />
+                      </button>
+
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          handleDoubleClick(task.taskId, task.title);
+                        }}
+                        className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100"
+                        title="Edit task"
+                      >
+                        <Pencil size={15} />
+                      </button>
+
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (task.recurrence !== 'none') {
+                            setTaskToDelete({ taskId: task.taskId, recurrence: task.recurrence });
+                          } else {
+                            onDeleteTask(task.taskId);
+                          }
+                        }}
+                        className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[34px] min-h-[34px] md:min-w-[36px] md:min-h-[36px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100"
+                        title="Delete task"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Subtasks Accordion Body */}
+                  {(isExpanded || (subtasks.length > 0 && !task.isCompleted)) && (
+                    <div className="w-full mt-2.5 pl-8 md:pl-12 pr-2 pt-2 border-t border-pink-50/80 flex flex-col gap-2 animate-slide-up-fade">
+                      {/* Progress Bar */}
+                      {subtasks.length > 0 && (
+                        <div className="w-full bg-pink-100/40 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-pink-400 h-full rounded-full transition-all duration-300 ease-out"
+                            style={{ width: `${subtaskPercent}%` }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Checklist items */}
+                      {subtasks.map(subtask => (
+                        <div
+                          key={subtask.id}
+                          className="flex items-center justify-between text-xs py-1 group/st"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => onToggleSubtask && onToggleSubtask(task.taskId, subtask.id)}
+                            className="flex items-center gap-2 text-left flex-1 min-w-0"
+                          >
+                            {subtask.isCompleted ? (
+                              <CheckSquare size={14} className="text-pink-400 shrink-0" />
+                            ) : (
+                              <Square size={14} className="text-gray-300 group-hover/st:text-pink-300 shrink-0" />
+                            )}
+                            <span
+                              className={`truncate ${
+                                subtask.isCompleted
+                                  ? 'text-gray-400 line-through opacity-70'
+                                  : 'text-gray-700'
+                              }`}
+                            >
+                              {subtask.title}
+                            </span>
+                          </button>
+                          {onDeleteSubtask && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteSubtask(task.taskId, subtask.id)}
+                              className="text-gray-300 hover:text-rose-400 p-1 rounded transition-colors opacity-0 group-hover/st:opacity-100"
+                              title="Delete step"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Quick inline subtask input */}
+                      {onAddSubtask && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="text"
+                            placeholder="Add subtask step..."
+                            value={inlineInput}
+                            onChange={(e) =>
+                              setInlineSubtaskInputs(prev => ({
+                                ...prev,
+                                [task.taskId]: e.target.value,
+                              }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (inlineInput.trim()) {
+                                  onAddSubtask(task.taskId, inlineInput.trim());
+                                  setInlineSubtaskInputs(prev => ({ ...prev, [task.taskId]: '' }));
+                                }
+                              }
+                            }}
+                            className="flex-1 bg-white/70 border border-pink-100 rounded-lg px-2.5 py-1 text-xs text-gray-700 placeholder-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pink-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (inlineInput.trim()) {
+                                onAddSubtask(task.taskId, inlineInput.trim());
+                                setInlineSubtaskInputs(prev => ({ ...prev, [task.taskId]: '' }));
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-lg text-xs font-semibold transition-all"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
-                
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      handleDoubleClick(task.taskId, task.title);
-                    }}
-                    className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
-                    title="Edit task"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      if (task.recurrence !== 'none') {
-                        setTaskToDelete({ taskId: task.taskId, recurrence: task.recurrence });
-                      } else {
-                        onDeleteTask(task.taskId);
-                      }
-                    }}
-                    className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[36px] min-h-[36px] md:min-w-[40px] md:min-h-[40px] flex items-center justify-center text-pink-200 hover:text-pink-400 hover:bg-pink-50 transition-all duration-300 rounded-full focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
-                    title="Delete task"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -697,6 +912,57 @@ function DailyTaskListComponent({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Checklist / Subtasks builder */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-pink-100/60">
+              <span className="text-xs text-gray-400 font-medium">Subtasks / Checklist ({newSubtasks.length}):</span>
+              {newSubtasks.length > 0 && (
+                <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto">
+                  {newSubtasks.map((st, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs bg-white/80 px-2.5 py-1.5 rounded-xl border border-pink-100/70">
+                      <span className="text-gray-700 truncate">{st}</span>
+                      <button
+                        type="button"
+                        onClick={() => setNewSubtasks(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-gray-400 hover:text-rose-500 transition-colors ml-2"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newSubtaskInput}
+                  onChange={(e) => setNewSubtaskInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newSubtaskInput.trim()) {
+                        setNewSubtasks(prev => [...prev, newSubtaskInput.trim()]);
+                        setNewSubtaskInput('');
+                      }
+                    }
+                  }}
+                  placeholder="Add checklist step (optional)..."
+                  className="flex-1 bg-white/70 border border-pink-100 rounded-xl px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pink-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newSubtaskInput.trim()) {
+                      setNewSubtasks(prev => [...prev, newSubtaskInput.trim()]);
+                      setNewSubtaskInput('');
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-pink-100 hover:bg-pink-200 text-pink-700 text-xs font-semibold rounded-xl transition-all"
+                >
+                  + Step
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4">

@@ -1,4 +1,4 @@
-import type { Task, CustomList, ListItem, RecurrenceType, TaskTag } from '../types';
+import type { Task, CustomList, ListItem, RecurrenceType, TaskTag, Subtask } from '../types';
 import { parseISO, isValid } from 'date-fns';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -63,6 +63,29 @@ export function validateTask(raw: unknown): Task | null {
     ? candidate.endDate
     : undefined;
 
+  let subtasks: Subtask[] | undefined = undefined;
+  if (Array.isArray(candidate.subtasks)) {
+    const validSubs: Subtask[] = [];
+    for (const sub of candidate.subtasks) {
+      if (sub && typeof sub === 'object') {
+        const sId = typeof sub.id === 'string' && sub.id.trim() ? sub.id.trim().slice(0, 100) : null;
+        const sTitle = sanitizeText(sub.title, 200);
+        if (sId && sTitle) {
+          validSubs.push({
+            id: sId,
+            title: sTitle,
+            isCompleted: Boolean(sub.isCompleted),
+          });
+        }
+      }
+    }
+    subtasks = validSubs;
+  }
+
+  const focusedSeconds = typeof candidate.focusedSeconds === 'number' && candidate.focusedSeconds >= 0
+    ? Math.floor(candidate.focusedSeconds)
+    : undefined;
+
   return {
     id,
     title,
@@ -72,6 +95,8 @@ export function validateTask(raw: unknown): Task | null {
     completedDates,
     excludedDates,
     endDate,
+    subtasks,
+    focusedSeconds,
   };
 }
 
