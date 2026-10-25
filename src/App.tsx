@@ -35,8 +35,11 @@ interface AppToast {
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [currentTheme, setCurrentTheme] = useState<AppTheme>(() => {
+  const [daytimeTheme, setDaytimeTheme] = useState<AppTheme>(() => {
     return (localStorage.getItem('zen_theme') as AppTheme) || 'sakura';
+  });
+  const [autoNightShift, setAutoNightShift] = useState<boolean>(() => {
+    return localStorage.getItem('zen_auto_night_shift') === 'true';
   });
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [notification, setNotification] = useState<AppToast | null>(null);
@@ -425,9 +428,11 @@ function App() {
     return "Time to rest. 🌙";
   };
 
+  const isNight = currentHour >= 20 || currentHour < 7;
+  const currentTheme: AppTheme = (autoNightShift && isNight) ? 'midnight' : daytimeTheme;
+
   React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', currentTheme);
-    localStorage.setItem('zen_theme', currentTheme);
   }, [currentTheme]);
 
   React.useEffect(() => {
@@ -447,7 +452,8 @@ function App() {
   }, [handleExport, showToast]);
 
   const handleThemeChange = useCallback((newTheme: AppTheme) => {
-    setCurrentTheme(newTheme);
+    setDaytimeTheme(newTheme);
+    localStorage.setItem('zen_theme', newTheme);
     const themeNames: Record<AppTheme, string> = {
       sakura: 'Sakura Rose 🌸',
       matcha: 'Matcha Garden 🍵',
@@ -458,6 +464,19 @@ function App() {
       type: 'info',
       title: 'Palette Changed',
       message: `Switched to ${themeNames[newTheme]}`,
+      duration: 3000,
+    });
+  }, [showToast]);
+
+  const toggleAutoNightShift = useCallback((enabled: boolean) => {
+    setAutoNightShift(enabled);
+    localStorage.setItem('zen_auto_night_shift', String(enabled));
+    showToast({
+      type: 'info',
+      title: enabled ? 'Auto Night Shift On 🌙' : 'Auto Night Shift Off',
+      message: enabled
+        ? 'Theme will auto-switch to Midnight between 20:00 and 07:00'
+        : 'App will stay on your selected palette',
       duration: 3000,
     });
   }, [showToast]);
@@ -549,7 +568,12 @@ function App() {
             <Award size={15} />
             <span className="hidden sm:inline">Badges</span>
           </button>
-          <ThemeSelector currentTheme={currentTheme} onSelectTheme={handleThemeChange} />
+          <ThemeSelector
+            currentTheme={currentTheme}
+            onSelectTheme={handleThemeChange}
+            autoNightShift={autoNightShift}
+            onToggleAutoNightShift={toggleAutoNightShift}
+          />
         </div>
       )}
 
@@ -978,6 +1002,48 @@ function App() {
         currentStreak={currentStreak}
         totalFocusSeconds={focusStats.totalFocusSeconds}
       />
+
+      {/* Floating Mini Focus Player (Visible on Tasks / Lists when Timer is active) */}
+      {activeTab !== 'focus' && (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 animate-slide-up-fade">
+          <div
+            onClick={() => setActiveTab('focus')}
+            className="flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-pink-200/90 shadow-[0_10px_30px_rgba(0,0,0,0.12)] px-4 py-2.5 rounded-full cursor-pointer hover:scale-102 hover:border-pink-300 transition-all group"
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleTimer();
+              }}
+              className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 hover:bg-pink-200 transition-colors shrink-0"
+              title={isTimerRunning ? "Pause" : "Play"}
+            >
+              {isTimerRunning ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
+            </button>
+            <div className="flex flex-col min-w-[120px]">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-bold text-xs text-pink-600">
+                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                </span>
+                <span className="text-[10px] text-gray-300">•</span>
+                <span className="text-xs font-medium text-gray-700 max-w-[130px] truncate">
+                  {activeFocusTask ? `🎯 ${activeFocusTask.title}` : 'Zen Focus 🧘'}
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden mt-1">
+                <div
+                  className="bg-pink-500 h-full rounded-full transition-all duration-300"
+                  style={{ width: `${initialTime > 0 ? Math.min(100, Math.max(0, ((initialTime - timeLeft) / initialTime) * 100)) : 0}%` }}
+                />
+              </div>
+            </div>
+            <span className="text-[11px] font-semibold text-pink-500 group-hover:text-pink-600 pl-1 shrink-0">
+              Open →
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -46,9 +46,16 @@ const THEMES: ThemeOption[] = [
 interface ThemeSelectorProps {
   currentTheme: AppTheme;
   onSelectTheme: (theme: AppTheme) => void;
+  autoNightShift?: boolean;
+  onToggleAutoNightShift?: (enabled: boolean) => void;
 }
 
-function ThemeSelectorComponent({ currentTheme, onSelectTheme }: ThemeSelectorProps) {
+function ThemeSelectorComponent({
+  currentTheme,
+  onSelectTheme,
+  autoNightShift = false,
+  onToggleAutoNightShift,
+}: ThemeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +148,29 @@ function ThemeSelectorComponent({ currentTheme, onSelectTheme }: ThemeSelectorPr
               );
             })}
           </div>
+
+          {onToggleAutoNightShift && (
+            <div className="pt-2 mt-2 border-t border-pink-50 flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 text-gray-700">
+                <span className="text-xs">🌙</span>
+                <span className="text-[11px] font-medium">Auto Night Shift (20:00)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onToggleAutoNightShift(!autoNightShift)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  autoNightShift ? 'bg-pink-500' : 'bg-gray-200'
+                }`}
+                title={autoNightShift ? "Turn off Auto Night Shift" : "Turn on Auto Night Shift"}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    autoNightShift ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
