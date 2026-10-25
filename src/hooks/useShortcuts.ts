@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 interface ShortcutHandlers {
+  onToggleFocusTab?: () => void;
   onToggleZen?: () => void;
   onGoToToday?: () => void;
   onNewTask?: () => void;
@@ -9,6 +10,7 @@ interface ShortcutHandlers {
 }
 
 export function useShortcuts({
+  onToggleFocusTab,
   onToggleZen,
   onGoToToday,
   onNewTask,
@@ -40,7 +42,15 @@ export function useShortcuts({
 
       const key = e.key.toLowerCase();
 
-      if (key === 'f' && onToggleZen) {
+      if (key === 'f') {
+        if (onToggleFocusTab) {
+          e.preventDefault();
+          onToggleFocusTab();
+        } else if (onToggleZen) {
+          e.preventDefault();
+          onToggleZen();
+        }
+      } else if (key === 'z' && onToggleZen) {
         e.preventDefault();
         onToggleZen();
       } else if (key === 't' && onGoToToday) {
@@ -54,5 +64,5 @@ export function useShortcuts({
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [onToggleZen, onGoToToday, onNewTask, onToggleShortcuts, onToggleTimer]);
+  }, [onToggleFocusTab, onToggleZen, onGoToToday, onNewTask, onToggleShortcuts, onToggleTimer]);
 }

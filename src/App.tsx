@@ -105,7 +105,24 @@ function App() {
   const [isEveningReviewOpen, setIsEveningReviewOpen] = useState(false);
   const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
-  const [isSoftHorizonMode, setIsSoftHorizonMode] = useState(false);
+  const [isSoftHorizonMode, setIsSoftHorizonMode] = useState(() => {
+    return localStorage.getItem('zen_soft_horizon_mode') === 'true';
+  });
+
+  const toggleSoftHorizonMode = useCallback(() => {
+    playWaterDrop();
+    setIsSoftHorizonMode(prev => {
+      const next = !prev;
+      localStorage.setItem('zen_soft_horizon_mode', String(next));
+      return next;
+    });
+  }, []);
+
+  const setSoftHorizonModeExplicit = useCallback((val: boolean) => {
+    playWaterDrop();
+    setIsSoftHorizonMode(val);
+    localStorage.setItem('zen_soft_horizon_mode', String(val));
+  }, []);
 
   const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
 
@@ -147,8 +164,15 @@ function App() {
   }, [startTimer, showToast]);
 
   useShortcuts({
+    onToggleFocusTab: () => {
+      setIsZenMode(false);
+      setActiveTab(prev => (prev === 'focus' ? 'tasks' : 'focus'));
+    },
     onToggleZen: toggleZenMode,
-    onGoToToday: () => setSelectedDate(new Date()),
+    onGoToToday: () => {
+      setSelectedDate(new Date());
+      setActiveTab('tasks');
+    },
     onToggleShortcuts: () => setIsShortcutsOpen(prev => !prev),
     onToggleTimer: toggleTimer,
   });
@@ -605,6 +629,30 @@ function App() {
         </div>
       )}
 
+      {/* Zen Mode Banner if full tabs are hidden */}
+      {isZenMode && (
+        <div className="flex items-center gap-2.5 mb-4 md:mb-6 z-40 shrink-0 animate-slide-up-fade">
+          <button
+            onClick={() => setIsZenMode(false)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white/80 hover:bg-white text-pink-600 rounded-full border border-pink-200/80 shadow-xs text-xs font-semibold transition-all active:scale-95"
+            title="Exit Zen View (Z)"
+          >
+            <Minimize2 size={14} />
+            <span>Exit Zen View (Z)</span>
+          </button>
+          <button
+            onClick={() => {
+              setIsZenMode(false);
+              setActiveTab('focus');
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white rounded-full shadow-xs text-xs font-semibold transition-all active:scale-95"
+            title="Go to Focus Screen (F)"
+          >
+            <span>Focus Screen (F) →</span>
+          </button>
+        </div>
+      )}
+
       <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
         
         {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
@@ -667,7 +715,7 @@ function App() {
                 />
               </div>
               <div className="mt-3 text-xs text-gray-400 text-center whitespace-nowrap shrink-0 hidden lg:block">
-                Shortcuts: N (New) • F (Focus) • T (Today)
+                Shortcuts: N (New) • F (Focus) • Z (Zen) • T (Today) • Space (Timer)
               </div>
             </div>
           </div>
@@ -729,6 +777,8 @@ function App() {
                 onFinishEarly={finishEarlySession}
                 overdueTasksCount={overdueCount}
                 onRolloverTasks={handleRollover}
+                isSoftHorizonMode={isSoftHorizonMode}
+                onToggleSoftHorizonMode={toggleSoftHorizonMode}
               />
             </div>
           </div>
@@ -780,31 +830,56 @@ function App() {
               {isTimerRunning && (
                 <div className="absolute w-80 h-80 rounded-full bg-pink-300/20 blur-3xl animate-pulse pointer-events-none" />
               )}
-              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-6">
+              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-4">
                 <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-pink-400'}`} />
                 <span className="text-xs font-semibold text-pink-600">
                   {isTimerRunning ? 'Deep Focus Active 🧘' : 'Ready to Focus'}
                 </span>
               </div>
 
+              {/* Segmented Mode Selector: Exact vs Soft Horizon */}
+              <div className="flex items-center bg-pink-100/60 dark:bg-pink-950/40 p-1 rounded-full border border-pink-200/70 mb-5 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setSoftHorizonModeExplicit(false)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    !isSoftHorizonMode
+                      ? 'bg-white text-pink-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <span>⏱️</span>
+                  <span>Exact Time</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSoftHorizonModeExplicit(true)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    isSoftHorizonMode
+                      ? 'bg-white text-pink-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <span>🌸</span>
+                  <span>Soft Horizon</span>
+                </button>
+              </div>
+
               {/* Digits */}
               <div
-                onClick={() => {
-                  playWaterDrop();
-                  setIsSoftHorizonMode(prev => !prev);
-                }}
+                onClick={toggleSoftHorizonMode}
                 className="cursor-pointer group flex flex-col items-center"
-                title="Click to toggle Soft Horizon Mode 🌸"
+                title="Click to toggle mode (Exact / Soft)"
               >
                 <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none group-hover:text-pink-500 transition-colors">
                   {isSoftHorizonMode
-                    ? `~${Math.max(1, Math.ceil((timeLeft || 0) / 60))}m`
+                    ? ((timeLeft || 0) < 60 && (timeLeft || 0) > 0 ? '<1m' : `~${Math.max(1, Math.ceil((timeLeft || 0) / 60))}m`)
                     : `${Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:${(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}`}
                 </div>
                 <p className="text-xs text-gray-400 mt-2 font-medium">
                   {isSoftHorizonMode
-                    ? 'Soft Horizon Mode 🌸 (click for exact seconds)'
-                    : (isTimerRunning ? 'Immerse yourself in your task' : 'Select a duration or press play')}
+                    ? 'Stress-free Soft Horizon Mode 🌸 (calm rounded minutes)'
+                    : (isTimerRunning ? 'Exact Countdown Mode ⏱️ • Deep focus session' : 'Exact Countdown Mode ⏱️ • Select preset or press play')}
                 </p>
               </div>
 
@@ -1054,7 +1129,10 @@ function App() {
       {activeTab !== 'focus' && (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 animate-slide-up-fade">
           <div
-            onClick={() => setActiveTab('focus')}
+            onClick={() => {
+              setIsZenMode(false);
+              setActiveTab('focus');
+            }}
             className="flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-pink-200/90 shadow-[0_10px_30px_rgba(0,0,0,0.12)] px-4 py-2.5 rounded-full cursor-pointer hover:scale-102 hover:border-pink-300 transition-all group"
           >
             <button
@@ -1071,7 +1149,9 @@ function App() {
             <div className="flex flex-col min-w-[120px]">
               <div className="flex items-center gap-1.5">
                 <span className="font-mono font-bold text-xs text-pink-600">
-                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                  {isSoftHorizonMode
+                    ? (timeLeft < 60 && timeLeft > 0 ? '<1m' : `~${Math.max(1, Math.ceil(timeLeft / 60))}m`)
+                    : `${Math.floor(timeLeft / 60).toString().padStart(2, '0')}:${(timeLeft % 60).toString().padStart(2, '0')}`}
                 </span>
                 <span className="text-[10px] text-gray-300">•</span>
                 <span className="text-xs font-medium text-gray-700 max-w-[130px] truncate">

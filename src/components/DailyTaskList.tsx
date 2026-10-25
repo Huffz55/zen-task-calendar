@@ -104,6 +104,8 @@ interface DailyTaskListProps {
   onFinishEarly?: () => void;
   overdueTasksCount?: number;
   onRolloverTasks?: () => void;
+  isSoftHorizonMode?: boolean;
+  onToggleSoftHorizonMode?: () => void;
 }
 
 function DailyTaskListComponent({ 
@@ -137,7 +139,9 @@ function DailyTaskListComponent({
   onAdjustTimer,
   onFinishEarly,
   overdueTasksCount = 0,
-  onRolloverTasks
+  onRolloverTasks,
+  isSoftHorizonMode,
+  onToggleSoftHorizonMode
 }: DailyTaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
@@ -425,7 +429,7 @@ function DailyTaskListComponent({
                   className={`p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100 ${
                     isZenMode ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover/zen:opacity-100'
                   }`}
-                  title={isZenMode ? "Exit Focus Mode (F)" : "Focus Mode (F)"}
+                  title={isZenMode ? "Exit Zen View (Z)" : "Zen View (Z)"}
                 >
                   {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                 </button>
@@ -514,14 +518,21 @@ function DailyTaskListComponent({
                 <div className="hidden md:flex items-center">
                   <AmbientSoundControl />
                 </div>
-                <div className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right">
-                  {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
-                </div>
+                <button
+                  type="button"
+                  onClick={onToggleSoftHorizonMode}
+                  className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right hover:text-pink-600 transition-colors"
+                  title={isSoftHorizonMode ? "Switch to Exact Seconds ⏱️" : "Switch to Soft Horizon 🌸"}
+                >
+                  {isSoftHorizonMode
+                    ? ((timeLeft || 0) < 60 && (timeLeft || 0) > 0 ? '<1m' : `~${Math.max(1, Math.ceil((timeLeft || 0) / 60))}m`)
+                    : `${Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:${(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}`}
+                </button>
                 {onToggleZenMode && (
                   <button 
                     onClick={onToggleZenMode}
                     className="hidden md:flex p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-100/50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                    title="Exit Focus Mode (F)"
+                    title="Exit Zen View (Z)"
                   >
                     <Minimize2 size={16} />
                   </button>
