@@ -8,10 +8,11 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle, Minimize2 } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle, Minimize2, Check, ChevronDown, BarChart2 } from 'lucide-react';
 import { initAudioContext, playSingingBowl, playWaterDrop } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
+import { ZenMoreMenu } from './components/ZenMoreMenu';
 import { SyncModal } from './components/SyncModal';
 import { validateBackupPayload } from './utils/validation';
 import { useZenTimer } from './hooks/useZenTimer';
@@ -173,6 +174,7 @@ function App() {
   const [showOfflineReady, setShowOfflineReady] = useState(false);
   const [currentHour, setCurrentHour] = useState(new Date().getHours());
   const [activeTab, setActiveTab] = useState<'tasks' | 'lists' | 'focus'>('tasks');
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { lists, addList, deleteList, restoreList, addListItem, deleteListItem, toggleListItem, importLists } = useLists();
   const [todayDateStr, setTodayDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -579,50 +581,21 @@ function App() {
               Focus
             </button>
           </div>
-          <button
-            onClick={() => setIsSyncModalOpen(true)}
-            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-pink-500 hover:text-pink-600 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
-            title="Cloud Sync"
-          >
-            <Cloud size={16} />
-            <span className="hidden sm:inline">Sync</span>
-          </button>
-          <button
-            onClick={() => setIsEveningReviewOpen(true)}
-            className={`min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95 ${
-              currentHour >= 20
-                ? 'border-pink-300 text-pink-600 bg-white shadow-md ring-2 ring-pink-100'
-                : 'border-pink-50/80 text-pink-500 hover:text-pink-600 hover:bg-white'
-            }`}
-            title="Evening Review & Wind Down (Ready to close your day? 🌙)"
-          >
-            <Moon size={15} className={currentHour >= 20 ? 'animate-pulse text-pink-500' : ''} />
-            <span className="hidden sm:inline">Review</span>
-            {currentHour >= 20 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-pink-500 ml-0.5" />
-            )}
-          </button>
-          <button
-            onClick={() => setIsMilestonesOpen(true)}
-            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-amber-500 hover:text-amber-600 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
-            title="Zen Milestones & Streaks"
-          >
-            <Award size={15} />
-            <span className="hidden sm:inline">Badges</span>
-          </button>
-          <button
-            onClick={() => setIsShortcutsOpen(true)}
-            className="min-h-[44px] px-3.5 py-2 md:py-2.5 rounded-full bg-white/60 backdrop-blur-md shadow-sm border border-pink-50/80 text-gray-500 hover:text-gray-700 hover:bg-white flex items-center gap-1.5 text-xs font-semibold transition-all duration-200 active:scale-95"
-            title="Keyboard Shortcuts (?)"
-          >
-            <HelpCircle size={15} />
-            <span className="hidden sm:inline">Shortcuts</span>
-          </button>
+          {/* Theme Selector */}
           <ThemeSelector
             currentTheme={currentTheme}
             onSelectTheme={handleThemeChange}
             autoNightShift={autoNightShift}
             onToggleAutoNightShift={toggleAutoNightShift}
+          />
+
+          {/* Unified Sanctuary More Menu */}
+          <ZenMoreMenu
+            onOpenSync={() => setIsSyncModalOpen(true)}
+            onOpenReview={() => setIsEveningReviewOpen(true)}
+            onOpenMilestones={() => setIsMilestonesOpen(true)}
+            onOpenShortcuts={() => setIsShortcutsOpen(true)}
+            isEvening={currentHour >= 20}
           />
         </div>
       )}
@@ -830,101 +803,123 @@ function App() {
               {isTimerRunning && (
                 <div className="absolute w-80 h-80 rounded-full bg-pink-300/20 blur-3xl animate-pulse pointer-events-none" />
               )}
-              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-6">
+
+              {/* Status Indicator Badge */}
+              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-4 shadow-2xs">
                 <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-pink-400'}`} />
                 <span className="text-xs font-semibold text-pink-600">
-                  {isTimerRunning ? 'Deep Focus Active 🧘' : 'Ready to Focus'}
+                  {isTimerRunning ? 'Deep Focus Active 🧘' : 'Ready to Focus 🌸'}
                 </span>
               </div>
 
               {/* Digits - ALWAYS VISIBLE EXACT TIME */}
-              <div className="flex flex-col items-center my-2">
-                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none">
+              <div className="flex flex-col items-center my-1 select-none">
+                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800">
                   {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
                 </div>
-                <p className="text-xs text-gray-400 mt-2 font-medium">
-                  {isTimerRunning ? 'Immerse yourself in your task 🧘' : 'Select a duration or press play'}
+
+                {/* Subtitle / Focus message */}
+                <p className="text-xs text-gray-400 mt-2 font-medium max-w-sm text-center">
+                  {isTimerRunning
+                    ? (activeFocusTask ? `Target: ${activeFocusTask.title}` : 'Stay gently in the present moment 🌸')
+                    : 'Choose your flow and press start'}
                 </p>
               </div>
 
-              {/* Adjust buttons */}
-              <div className="flex items-center gap-3 mt-5">
-                <button
-                  onClick={() => adjustTime(-5 * 60)}
-                  className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-pink-600 bg-white/80 hover:bg-pink-50 border border-pink-100 rounded-xl transition-all"
-                >
-                  -5 min
-                </button>
-                <button
-                  onClick={() => adjustTime(5 * 60)}
-                  className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-pink-600 bg-white/80 hover:bg-pink-50 border border-pink-100 rounded-xl transition-all"
-                >
-                  +5 min
-                </button>
-              </div>
+              {/* Minimal Preset Segmented Strip (Visible when idle) */}
+              {!isTimerRunning && (
+                <div className="flex items-center gap-1.5 mt-4 p-1 rounded-2xl bg-pink-50/60 border border-pink-100/60 animate-fade-in">
+                  {[15, 25, 45, 60].map(mins => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setTimerMinutes(mins)}
+                      className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        initialTime === mins * 60
+                          ? 'bg-white text-pink-600 shadow-xs border border-pink-200/60 scale-102'
+                          : 'text-gray-400 hover:text-pink-600 hover:bg-white/60'
+                      }`}
+                      title={`Set timer to ${mins} minutes`}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              {/* Main controls */}
-              <div className="flex items-center gap-4 mt-6">
+              {/* Single Harmonious Controls Row */}
+              <div className="flex items-center justify-center gap-4 mt-6">
+                {/* Left Action: Reset (when elapsed/running) OR -5m (when idle) */}
+                {isTimerRunning || timeLeft < initialTime ? (
+                  <button
+                    type="button"
+                    onClick={resetTimer}
+                    className="w-11 h-11 rounded-full border border-pink-100 bg-white/80 hover:bg-pink-50 flex items-center justify-center text-gray-400 hover:text-pink-500 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    title="Reset Timer"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => adjustTime(-5 * 60)}
+                    className="h-10 px-3 rounded-full text-xs font-semibold text-gray-400 hover:text-pink-600 bg-white/60 hover:bg-pink-50 border border-pink-100/70 transition-all active:scale-95 shadow-2xs cursor-pointer"
+                    title="Subtract 5 minutes"
+                  >
+                    -5m
+                  </button>
+                )}
+
+                {/* Hero Play / Pause Button */}
                 <button
-                  onClick={resetTimer}
-                  className="w-12 h-12 rounded-full border border-pink-100 bg-white/80 hover:bg-pink-50 flex items-center justify-center text-gray-400 hover:text-pink-500 transition-all active:scale-95 shadow-xs"
-                  title="Reset Timer"
-                >
-                  <RotateCcw size={18} />
-                </button>
-                <button
+                  type="button"
                   onClick={() => {
                     if (!isTimerRunning) {
                       playSingingBowl();
                     }
                     toggleTimer();
                   }}
-                  className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-pink-200"
-                  title={isTimerRunning ? 'Pause' : 'Start'}
+                  className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-pink-500/20 cursor-pointer hover:scale-105"
+                  title={isTimerRunning ? 'Pause (Space)' : 'Start (Space)'}
                 >
-                  {isTimerRunning ? <Pause size={26} /> : <Play size={26} className="ml-1" />}
+                  {isTimerRunning ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
                 </button>
-              </div>
 
-              {/* Finish early button */}
-              {(isTimerRunning || timeLeft < initialTime) && (
-                <button
-                  onClick={finishEarlySession}
-                  className="mt-5 px-5 py-2 text-xs font-bold text-pink-600 bg-pink-100/70 hover:bg-pink-200/80 rounded-full border border-pink-200 transition-all active:scale-95 flex items-center gap-1.5 shadow-xs"
-                >
-                  <span>Finish Session & Log Focus</span>
-                  <span>✨</span>
-                </button>
-              )}
-
-              {/* Preset chips */}
-              <div className="flex items-center gap-2 mt-7 flex-wrap justify-center">
-                {[15, 25, 45, 60].map(mins => (
+                {/* Right Action: Finish Early (when elapsed/running) OR +5m (when idle) */}
+                {isTimerRunning || timeLeft < initialTime ? (
                   <button
-                    key={mins}
-                    onClick={() => setTimerMinutes(mins)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                      initialTime === mins * 60
-                        ? 'bg-pink-500 text-white shadow-xs'
-                        : 'bg-white/80 text-gray-500 hover:text-pink-600 border border-pink-100'
-                    }`}
+                    type="button"
+                    onClick={finishEarlySession}
+                    className="h-11 px-4 rounded-full border border-pink-200/80 bg-pink-50/90 hover:bg-pink-100 flex items-center gap-1.5 text-xs font-bold text-pink-600 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    title="Finish session and save focus log ✨"
                   >
-                    {mins}m
+                    <Check size={14} />
+                    <span>Finish</span>
                   </button>
-                ))}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => adjustTime(5 * 60)}
+                    className="h-10 px-3 rounded-full text-xs font-semibold text-gray-400 hover:text-pink-600 bg-white/60 hover:bg-pink-50 border border-pink-100/70 transition-all active:scale-95 shadow-2xs cursor-pointer"
+                    title="Add 5 minutes"
+                  >
+                    +5m
+                  </button>
+                )}
               </div>
 
               {/* Ambient Sound Bar in Focus view */}
-              <div className="mt-6 pt-5 border-t border-pink-100/80 w-full flex justify-center relative z-40">
+              <div className="mt-6 pt-4 border-t border-pink-100/60 w-full flex justify-center relative z-40">
                 <AmbientSoundControl align="center" dropDirection="down" />
               </div>
             </div>
 
             {/* Mindful Breathing Break Trigger */}
-            <div className="flex justify-center -my-2">
+            <div className="flex justify-center -my-1">
               <button
+                type="button"
                 onClick={() => setIsZenBreathingOpen(true)}
-                className="px-4 py-2 bg-white/70 hover:bg-pink-50 border border-pink-100 rounded-2xl text-xs font-semibold text-pink-600 transition-all shadow-xs flex items-center gap-2 hover:scale-105 active:scale-95"
+                className="px-4 py-2 bg-white/70 hover:bg-pink-50 border border-pink-100/80 rounded-2xl text-xs font-semibold text-pink-600 transition-all shadow-xs flex items-center gap-2 hover:scale-102 active:scale-95 cursor-pointer"
               >
                 <Wind size={15} className="text-pink-400" />
                 <span>Take a Zen Break (4-4-4 Breathing)</span>
@@ -932,20 +927,38 @@ function App() {
               </button>
             </div>
 
-            {/* Weekly Focus Analytics Card */}
-            <div className="relative z-10">
-              <FocusAnalyticsCard
-                totalFocusSeconds={focusStats.totalFocusSeconds}
-                totalSessionsCount={focusStats.totalSessionsCount}
-                todayFocusSeconds={focusStats.todayFocusSeconds}
-                weeklyDays={focusStats.weeklyDays}
-                maxDaySeconds={focusStats.maxDaySeconds}
-              />
-            </div>
+            {/* Collapsible Zen Focus Rhythm & Analytics */}
+            <div className="flex flex-col items-center w-full mt-2">
+              <button
+                type="button"
+                onClick={() => setShowAnalytics(prev => !prev)}
+                className="px-4 py-2 rounded-full bg-white/60 hover:bg-white text-gray-500 hover:text-pink-600 border border-pink-100 hover:border-pink-200 text-xs font-semibold transition-all duration-200 shadow-2xs flex items-center gap-2 cursor-pointer active:scale-95"
+                title="Toggle Weekly Focus Analytics & Activity Matrix"
+              >
+                <BarChart2 size={14} className={showAnalytics ? "text-pink-500" : "text-gray-400"} />
+                <span>{showAnalytics ? 'Hide Rhythm & Focus History' : 'View Rhythm & Focus History'}</span>
+                <ChevronDown size={14} className={`transition-transform duration-300 ${showAnalytics ? 'rotate-180 text-pink-500' : ''}`} />
+              </button>
 
-            {/* Zen 12-Week Heatmap Matrix */}
-            <div className="relative z-10">
-              <ZenHeatmap days={focusStats.heatmapDays || []} />
+              {showAnalytics && (
+                <div className="w-full flex flex-col gap-6 mt-4 animate-slide-up-fade">
+                  {/* Weekly Focus Analytics Card */}
+                  <div className="relative z-10">
+                    <FocusAnalyticsCard
+                      totalFocusSeconds={focusStats.totalFocusSeconds}
+                      totalSessionsCount={focusStats.totalSessionsCount}
+                      todayFocusSeconds={focusStats.todayFocusSeconds}
+                      weeklyDays={focusStats.weeklyDays}
+                      maxDaySeconds={focusStats.maxDaySeconds}
+                    />
+                  </div>
+
+                  {/* Zen 12-Week Heatmap Matrix */}
+                  <div className="relative z-10">
+                    <ZenHeatmap days={focusStats.heatmapDays || []} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
