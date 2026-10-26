@@ -9,6 +9,8 @@ export interface ZenTimerState {
   isTimerRunning: boolean;
   isZenMode: boolean;
   toggleZenMode: () => void;
+  setIsZenMode: React.Dispatch<React.SetStateAction<boolean>>;
+  exitZenMode: () => void;
   startTimer: () => void;
   pauseTimer: () => void;
   toggleTimer: () => void;
@@ -32,6 +34,10 @@ export function useZenTimer(
 
   const toggleZenMode = useCallback(() => {
     setIsZenMode(prev => !prev);
+  }, []);
+
+  const exitZenMode = useCallback(() => {
+    setIsZenMode(false);
   }, []);
 
   const startTimer = useCallback(() => {
@@ -230,6 +236,8 @@ export function useZenTimer(
     isTimerRunning,
     isZenMode,
     toggleZenMode,
+    setIsZenMode,
+    exitZenMode,
     startTimer,
     pauseTimer,
     toggleTimer,

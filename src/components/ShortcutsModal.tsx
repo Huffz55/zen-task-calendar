@@ -20,7 +20,12 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   },
   {
     keyDisplay: ['F'],
-    action: 'Zen Focus View',
+    action: 'Focus Screen',
+    description: 'Switch instantly between the Focus timer tab and Tasks',
+  },
+  {
+    keyDisplay: ['Z'],
+    action: 'Zen View',
     description: 'Toggle distraction-free view (collapse calendar & expand tasks)',
   },
   {
