@@ -20,13 +20,8 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   },
   {
     keyDisplay: ['F'],
-    action: 'Focus Screen',
-    description: 'Switch directly to the dedicated Focus Timer & soundscape',
-  },
-  {
-    keyDisplay: ['Z'],
-    action: 'Zen Distraction-Free',
-    description: 'Collapse calendar and expand tasks list to full width',
+    action: 'Zen Focus View',
+    description: 'Toggle distraction-free view (collapse calendar & expand tasks)',
   },
   {
     keyDisplay: ['T'],
@@ -45,8 +40,8 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   },
   {
     keyDisplay: ['Esc'],
-    action: 'Escape',
-    description: 'Dismiss open dialogs or exit distraction-free view',
+    action: 'Escape / Cancel',
+    description: 'Dismiss open dialogs, cancel task creation, or exit Zen view',
   },
 ];
 

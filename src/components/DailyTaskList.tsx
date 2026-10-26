@@ -182,9 +182,27 @@ function DailyTaskListComponent({
     ? tasks 
     : tasks.filter(t => t.tag === activeTagFilter);
 
-  // Global 'N' Hotkey for Add Task
+  // Global 'N' Hotkey for Add Task & 'Escape' to dismiss
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (taskToDelete) {
+          e.preventDefault();
+          setTaskToDelete(null);
+          return;
+        }
+        if (editingTaskId) {
+          e.preventDefault();
+          setEditingTaskId(null);
+          return;
+        }
+        if (isAdding) {
+          e.preventDefault();
+          setIsAdding(false);
+          return;
+        }
+      }
+
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
         return;
       }
@@ -196,7 +214,7 @@ function DailyTaskListComponent({
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [taskToDelete, editingTaskId, isAdding]);
 
   const submitTask = () => {
     const raw = newTaskTitle.trim();
@@ -244,6 +262,9 @@ function DailyTaskListComponent({
     if (e.key === 'Enter') {
       e.preventDefault();
       submitTask();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsAdding(false);
     }
   };
 
@@ -280,6 +301,8 @@ function DailyTaskListComponent({
   const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, taskId: string) => {
     if (e.key === 'Enter') {
       saveEdit(taskId);
+    } else if (e.key === 'Escape') {
+      setEditingTaskId(null);
     }
   };
 
@@ -533,23 +556,32 @@ function DailyTaskListComponent({
         )}
 
         {tasks.length === 0 ? (
-          <div className="h-full min-h-[180px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full p-6">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>
-            
-            <div className="w-16 h-16 bg-pink-50/80 border border-pink-100 rounded-2xl flex items-center justify-center mb-3 text-2xl relative z-10 shadow-sm">
-              🌸
+          !isAdding ? (
+            <div className="h-full min-h-[180px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full p-6">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>
+              
+              <div className="w-16 h-16 bg-pink-50/80 border border-pink-100 rounded-2xl flex items-center justify-center mb-3 text-2xl relative z-10 shadow-sm">
+                🌸
+              </div>
+              <h4 className="text-base font-medium text-gray-700 mb-1 relative z-10">Clear mind, calm day</h4>
+              <p className="text-xs text-gray-400 mb-4 max-w-xs relative z-10">No tasks scheduled for today. Take a mindful break or add your first goal.</p>
+              <button 
+                type="button"
+                onClick={() => setIsAdding(true)}
+                className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-500 rounded-xl font-medium text-xs transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none flex items-center gap-1.5 relative z-10 hover:scale-105 active:scale-95 cursor-pointer"
+                title="Add a new task (Press 'N')"
+              >
+                <Plus size={16} />
+                Add Task (N)
+              </button>
             </div>
-            <h4 className="text-base font-medium text-gray-700 mb-1 relative z-10">Clear mind, calm day</h4>
-            <p className="text-xs text-gray-400 mb-4 max-w-xs relative z-10">No tasks scheduled for today. Take a mindful break or add your first goal.</p>
-            <button 
-              onClick={() => setIsAdding(true)}
-              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-500 rounded-xl font-medium text-xs transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none flex items-center gap-1.5 relative z-10 hover:scale-105 active:scale-95"
-              title="Add a new task (Press 'N')"
-            >
-              <Plus size={16} />
-              Add Task (N)
-            </button>
-          </div>
+          ) : (
+            <div className="flex-1 min-h-[100px] flex flex-col items-center justify-center text-center text-gray-400 py-6 animate-slide-up-fade">
+              <span className="text-2xl mb-2 select-none opacity-80">🌱</span>
+              <p className="text-xs text-pink-500 font-semibold">Creating your first goal for today</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Press Enter to save or Esc to cancel</p>
+            </div>
+          )
         ) : (
           <ul className="space-y-3">
             {displayedTasks.map(task => {
@@ -1097,9 +1129,9 @@ function DailyTaskListComponent({
                 <button 
                   type="button" 
                   onClick={() => setIsAdding(false)}
-                  className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+                  className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none cursor-pointer"
                 >
-                  Cancel
+                  Cancel (Esc)
                 </button>
                 <button 
                   type="submit"

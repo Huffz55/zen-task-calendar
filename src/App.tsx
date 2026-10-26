@@ -146,10 +146,6 @@ function App() {
   }, [startTimer, showToast]);
 
   useShortcuts({
-    onToggleFocusTab: () => {
-      setIsZenMode(false);
-      setActiveTab(prev => (prev === 'focus' ? 'tasks' : 'focus'));
-    },
     onToggleZen: toggleZenMode,
     onGoToToday: () => {
       setSelectedDate(new Date());
@@ -157,6 +153,15 @@ function App() {
     },
     onToggleShortcuts: () => setIsShortcutsOpen(prev => !prev),
     onToggleTimer: toggleTimer,
+    onEscape: () => {
+      if (isSyncModalOpen) { setIsSyncModalOpen(false); return; }
+      if (isEveningReviewOpen) { setIsEveningReviewOpen(false); return; }
+      if (isMilestonesOpen) { setIsMilestonesOpen(false); return; }
+      if (isShortcutsOpen) { setIsShortcutsOpen(false); return; }
+      if (isZenBreathingOpen) { setIsZenBreathingOpen(false); return; }
+      if (isZenMode) { toggleZenMode(); return; }
+      if (activeTab !== 'tasks') { setActiveTab('tasks'); return; }
+    },
   });
 
   const [slideAnim, setSlideAnim] = useState<'left' | 'right' | null>(null);
@@ -615,22 +620,24 @@ function App() {
       {isZenMode && (
         <div className="flex items-center gap-2.5 mb-4 md:mb-6 z-40 shrink-0 animate-slide-up-fade">
           <button
-            onClick={() => setIsZenMode(false)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white/80 hover:bg-white text-pink-600 rounded-full border border-pink-200/80 shadow-xs text-xs font-semibold transition-all active:scale-95"
-            title="Exit Zen View (Z)"
+            type="button"
+            onClick={toggleZenMode}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white/90 hover:bg-white text-pink-600 rounded-full border border-pink-200 shadow-xs text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+            title="Exit Focus Mode (F or Esc)"
           >
             <Minimize2 size={14} />
-            <span>Exit Zen View (Z)</span>
+            <span>Exit Focus Mode (F)</span>
           </button>
           <button
+            type="button"
             onClick={() => {
-              setIsZenMode(false);
+              toggleZenMode();
               setActiveTab('focus');
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white rounded-full shadow-xs text-xs font-semibold transition-all active:scale-95"
-            title="Go to Focus Screen (F)"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white rounded-full shadow-xs text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+            title="Go to Focus Timer Tab"
           >
-            <span>Focus Screen (F) →</span>
+            <span>Focus Timer Tab →</span>
           </button>
         </div>
       )}
@@ -699,7 +706,7 @@ function App() {
                 />
               </div>
               <div className="mt-3 text-xs text-gray-400 text-center whitespace-nowrap shrink-0 hidden lg:block">
-                Shortcuts: N (New) • F (Focus) • Z (Zen) • T (Today) • Space (Timer)
+                Shortcuts: N (New) • F (Focus) • T (Today) • Space (Timer) • Esc
               </div>
             </div>
           </div>
@@ -1076,7 +1083,7 @@ function App() {
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 animate-slide-up-fade">
           <div
             onClick={() => {
-              setIsZenMode(false);
+              if (isZenMode) toggleZenMode();
               setActiveTab('focus');
             }}
             className="flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-pink-200/90 shadow-[0_10px_30px_rgba(0,0,0,0.12)] px-4 py-2.5 rounded-full cursor-pointer hover:scale-102 hover:border-pink-300 transition-all group"

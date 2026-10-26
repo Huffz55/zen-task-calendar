@@ -18,6 +18,14 @@ export function ZenBreathingModal({ isOpen, onClose }: ZenBreathingModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     playSingingBowl();
     let isMounted = true;
 
@@ -63,6 +71,7 @@ export function ZenBreathingModal({ isOpen, onClose }: ZenBreathingModalProps) {
     return () => {
       isMounted = false;
       clearInterval(ticker);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
 

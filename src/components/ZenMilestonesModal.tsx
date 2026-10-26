@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { X, Award, CheckCircle2, Lock } from 'lucide-react';
 import type { Task, ZenMilestone } from '../types';
 
@@ -17,6 +17,17 @@ export function ZenMilestonesModal({
   currentStreak,
   totalFocusSeconds,
 }: ZenMilestonesModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
   const milestones: ZenMilestone[] = useMemo(() => {
     const hasCompletedTask = tasks.some(
       t => Array.isArray(t.completedDates) && t.completedDates.length > 0
