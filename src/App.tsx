@@ -560,7 +560,7 @@ function App() {
       
       {/* Tab Navigation & Theme Selector */}
       {!isZenMode && (
-        <div className="flex items-center gap-2.5 mb-4 md:mb-6 z-40 shrink-0 relative">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 mb-4 md:mb-6 z-40 shrink-0 relative">
           <div className="flex bg-white/60 backdrop-blur-md p-1.5 rounded-full shadow-sm border border-pink-50/80">
             <button
               onClick={() => setActiveTab('tasks')}
@@ -581,6 +581,43 @@ function App() {
               Focus
             </button>
           </div>
+
+          {/* Integrated Header Mini Focus Player (Visible on Tasks / Lists when Timer is active) */}
+          {activeTab !== 'focus' && (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) && (
+            <div className="flex items-center gap-2 bg-white/95 backdrop-blur-xl border border-pink-200/90 shadow-[0_8px_24px_rgba(244,114,182,0.16)] px-3.5 py-1.5 rounded-full animate-slide-up-fade ring-1 ring-pink-100/60">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTimer();
+                }}
+                className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 hover:bg-pink-200 transition-colors shrink-0 cursor-pointer shadow-2xs active:scale-90"
+                title={isTimerRunning ? "Pause timer (Space)" : "Start timer (Space)"}
+              >
+                {isTimerRunning ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  exitZenMode();
+                  setActiveTab('focus');
+                }}
+                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+                title="Open Focus Screen (F)"
+              >
+                <span className="font-mono font-bold text-xs text-pink-600 tracking-wider">
+                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                </span>
+                <span className="text-[10px] text-gray-300">•</span>
+                <span className="text-xs font-medium text-gray-700 max-w-[130px] truncate">
+                  {activeFocusTask ? activeFocusTask.title : 'Zen Focus 🧘'}
+                </span>
+                <span className="text-[11px] font-semibold text-pink-500 ml-0.5">Focus →</span>
+              </button>
+            </div>
+          )}
+
           {/* Theme Selector */}
           <ThemeSelector
             currentTheme={currentTheme}
@@ -623,20 +660,36 @@ function App() {
           >
             <span>Focus Screen (F) →</span>
           </button>
+          {(isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) && (
+            <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-pink-200/90 shadow-sm px-3 py-1.5 rounded-full">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTimer();
+                }}
+                className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 hover:bg-pink-200 transition-colors shrink-0 cursor-pointer"
+                title={isTimerRunning ? "Pause" : "Play"}
+              >
+                {isTimerRunning ? <Pause size={10} /> : <Play size={10} className="ml-0.5" />}
+              </button>
+              <span className="font-mono font-bold text-xs text-pink-600">
+                {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
       <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
         
         {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-24 ${
-          (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) ? 'lg:pb-16' : 'lg:pb-0'
-        }
+        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-24 lg:pb-0
           ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           {/* Left Column - Header & Calendar */}
           <div
-            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-4 md:gap-6 shrink-0 lg:h-full lg:overflow-hidden
+            className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-4 md:gap-6 shrink-0 lg:h-full lg:overflow-visible
               ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0 hidden lg:flex' : 'w-full lg:w-5/12'}
             `}
           >
@@ -1101,81 +1154,6 @@ function App() {
         isOpen={isShortcutsOpen}
         onClose={handleCloseShortcuts}
       />
-
-      {/* Floating Mini Focus Player (Visible on Tasks / Lists when Timer is active) */}
-      {activeTab !== 'focus' && (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 animate-slide-up-fade pointer-events-auto select-none">
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              exitZenMode();
-              setActiveTab('focus');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                exitZenMode();
-                setActiveTab('focus');
-              }
-            }}
-            className="flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-pink-200/90 shadow-[0_12px_36px_rgba(244,114,182,0.18)] hover:shadow-[0_16px_40px_rgba(244,114,182,0.25)] px-4 py-2.5 rounded-full cursor-pointer hover:scale-102 hover:border-pink-300 transition-all group ring-1 ring-pink-100/60"
-            title="Open Focus Screen (F)"
-          >
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleTimer();
-              }}
-              className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 hover:bg-pink-200 transition-colors shrink-0 cursor-pointer shadow-xs active:scale-90"
-              title={isTimerRunning ? "Pause timer" : "Resume timer"}
-            >
-              {isTimerRunning ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
-            </button>
-
-            <div
-              className="flex flex-col min-w-[120px] cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                exitZenMode();
-                setActiveTab('focus');
-              }}
-              title="Go to Focus tab"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono font-bold text-xs text-pink-600 tracking-wider">
-                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
-                </span>
-                <span className="text-[10px] text-gray-300">•</span>
-                <span className="text-xs font-medium text-gray-700 max-w-[140px] truncate">
-                  {activeFocusTask ? `🎯 ${activeFocusTask.title}` : 'Zen Focus 🧘'}
-                </span>
-              </div>
-              <div className="w-full bg-pink-100/60 h-1.5 rounded-full overflow-hidden mt-1">
-                <div
-                  className="bg-gradient-to-r from-pink-400 to-rose-500 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${initialTime > 0 ? Math.min(100, Math.max(0, ((initialTime - timeLeft) / initialTime) * 100)) : 0}%` }}
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                exitZenMode();
-                setActiveTab('focus');
-              }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-600 hover:text-pink-700 text-xs font-semibold transition-all shrink-0 cursor-pointer border border-pink-200/60 active:scale-95"
-              title="Open Focus Screen (F)"
-            >
-              <span>Open</span>
-              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

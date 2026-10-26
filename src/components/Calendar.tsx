@@ -104,7 +104,7 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
             }}
             title={isTodayDate ? "Go to Today (T)" : undefined}
             className={`
-              relative flex flex-col items-center justify-center p-1 md:p-2 min-h-[48px] md:min-h-[56px] text-sm cursor-pointer
+              relative flex flex-col items-center justify-center p-1 md:p-1.5 min-h-[40px] md:min-h-[48px] text-sm cursor-pointer
               border transition-all duration-200 rounded-2xl flex-1 shrink-0
               ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600'}
               ${isSelected ? 'bg-pink-100 text-pink-700 font-medium shadow-sm border-transparent' : 'hover:bg-pink-50 border-transparent'}
@@ -129,7 +129,7 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
       );
       days = [];
     }
-    return <div className="flex flex-col flex-1 min-h-0 pb-6">{rows}</div>;
+    return <div className="flex flex-col flex-1 min-h-0">{rows}</div>;
   };
 
   return (
