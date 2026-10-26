@@ -10,6 +10,8 @@ interface ActiveAmbient {
 }
 
 const activeAmbients = new Map<AmbientSoundType, ActiveAmbient>();
+const bufferCache: Partial<Record<AmbientSoundType, AudioBuffer>> = {};
+let cachedSampleRate = 0;
 let masterVolume = 0.35;
 
 export function getAmbientVolume(): number {

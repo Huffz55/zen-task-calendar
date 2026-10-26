@@ -8,7 +8,7 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle, Minimize2 } from 'lucide-react';
 import { initAudioContext, playSingingBowl, playWaterDrop } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
@@ -105,24 +105,6 @@ function App() {
   const [isEveningReviewOpen, setIsEveningReviewOpen] = useState(false);
   const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
-  const [isSoftHorizonMode, setIsSoftHorizonMode] = useState(() => {
-    return localStorage.getItem('zen_soft_horizon_mode') === 'true';
-  });
-
-  const toggleSoftHorizonMode = useCallback(() => {
-    playWaterDrop();
-    setIsSoftHorizonMode(prev => {
-      const next = !prev;
-      localStorage.setItem('zen_soft_horizon_mode', String(next));
-      return next;
-    });
-  }, []);
-
-  const setSoftHorizonModeExplicit = useCallback((val: boolean) => {
-    playWaterDrop();
-    setIsSoftHorizonMode(val);
-    localStorage.setItem('zen_soft_horizon_mode', String(val));
-  }, []);
 
   const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
 
@@ -656,7 +638,9 @@ function App() {
       <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
         
         {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-32 lg:pb-0
+        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-32 ${
+          (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) ? 'lg:pb-20' : 'lg:pb-0'
+        }
           ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           {/* Left Column - Header & Calendar */}
@@ -777,8 +761,6 @@ function App() {
                 onFinishEarly={finishEarlySession}
                 overdueTasksCount={overdueCount}
                 onRolloverTasks={handleRollover}
-                isSoftHorizonMode={isSoftHorizonMode}
-                onToggleSoftHorizonMode={toggleSoftHorizonMode}
               />
             </div>
           </div>
@@ -826,60 +808,24 @@ function App() {
             )}
 
             {/* Zen Timer Big View with Breathing Glow Aura */}
-            <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center overflow-hidden">
+            <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center">
               {isTimerRunning && (
                 <div className="absolute w-80 h-80 rounded-full bg-pink-300/20 blur-3xl animate-pulse pointer-events-none" />
               )}
-              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-4">
+              <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-6">
                 <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-pink-400'}`} />
                 <span className="text-xs font-semibold text-pink-600">
                   {isTimerRunning ? 'Deep Focus Active 🧘' : 'Ready to Focus'}
                 </span>
               </div>
 
-              {/* Segmented Mode Selector: Exact vs Soft Horizon */}
-              <div className="flex items-center bg-pink-100/60 dark:bg-pink-950/40 p-1 rounded-full border border-pink-200/70 mb-5 shadow-xs">
-                <button
-                  type="button"
-                  onClick={() => setSoftHorizonModeExplicit(false)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                    !isSoftHorizonMode
-                      ? 'bg-white text-pink-600 shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <span>⏱️</span>
-                  <span>Exact Time</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSoftHorizonModeExplicit(true)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                    isSoftHorizonMode
-                      ? 'bg-white text-pink-600 shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <span>🌸</span>
-                  <span>Soft Horizon</span>
-                </button>
-              </div>
-
-              {/* Digits */}
-              <div
-                onClick={toggleSoftHorizonMode}
-                className="cursor-pointer group flex flex-col items-center"
-                title="Click to toggle mode (Exact / Soft)"
-              >
-                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none group-hover:text-pink-500 transition-colors">
-                  {isSoftHorizonMode
-                    ? ((timeLeft || 0) < 60 && (timeLeft || 0) > 0 ? '<1m' : `~${Math.max(1, Math.ceil((timeLeft || 0) / 60))}m`)
-                    : `${Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:${(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}`}
+              {/* Digits - ALWAYS VISIBLE EXACT TIME */}
+              <div className="flex flex-col items-center my-2">
+                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 select-none">
+                  {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
                 </div>
                 <p className="text-xs text-gray-400 mt-2 font-medium">
-                  {isSoftHorizonMode
-                    ? 'Stress-free Soft Horizon Mode 🌸 (calm rounded minutes)'
-                    : (isTimerRunning ? 'Exact Countdown Mode ⏱️ • Deep focus session' : 'Exact Countdown Mode ⏱️ • Select preset or press play')}
+                  {isTimerRunning ? 'Immerse yourself in your task 🧘' : 'Select a duration or press play'}
                 </p>
               </div>
 
@@ -1149,9 +1095,7 @@ function App() {
             <div className="flex flex-col min-w-[120px]">
               <div className="flex items-center gap-1.5">
                 <span className="font-mono font-bold text-xs text-pink-600">
-                  {isSoftHorizonMode
-                    ? (timeLeft < 60 && timeLeft > 0 ? '<1m' : `~${Math.max(1, Math.ceil(timeLeft / 60))}m`)
-                    : `${Math.floor(timeLeft / 60).toString().padStart(2, '0')}:${(timeLeft % 60).toString().padStart(2, '0')}`}
+                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </span>
                 <span className="text-[10px] text-gray-300">•</span>
                 <span className="text-xs font-medium text-gray-700 max-w-[130px] truncate">

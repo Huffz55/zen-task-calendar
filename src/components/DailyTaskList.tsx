@@ -104,8 +104,6 @@ interface DailyTaskListProps {
   onFinishEarly?: () => void;
   overdueTasksCount?: number;
   onRolloverTasks?: () => void;
-  isSoftHorizonMode?: boolean;
-  onToggleSoftHorizonMode?: () => void;
 }
 
 function DailyTaskListComponent({ 
@@ -139,9 +137,7 @@ function DailyTaskListComponent({
   onAdjustTimer,
   onFinishEarly,
   overdueTasksCount = 0,
-  onRolloverTasks,
-  isSoftHorizonMode,
-  onToggleSoftHorizonMode
+  onRolloverTasks
 }: DailyTaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
@@ -420,14 +416,15 @@ function DailyTaskListComponent({
               </div>
             </div>
             
-            <div className={`flex items-center gap-2 shrink-0 ${isZenMode ? 'md:hidden' : ''}`}>
-              <AmbientSoundControl />
+            <div className="flex items-center gap-2 shrink-0">
+              <AmbientSoundControl align="right" dropDirection="down" />
               
               {onToggleZenMode && (
                 <button 
+                  type="button"
                   onClick={onToggleZenMode}
-                  className={`p-2 text-pink-200 hover:text-pink-400 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none focus-visible:opacity-100 ${
-                    isZenMode ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover/zen:opacity-100'
+                  className={`p-2 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none ${
+                    isZenMode ? 'bg-pink-50 text-pink-500' : ''
                   }`}
                   title={isZenMode ? "Exit Zen View (Z)" : "Zen View (Z)"}
                 >
@@ -437,123 +434,6 @@ function DailyTaskListComponent({
             </div>
           </div>
         </div>
-
-        {/* Zen Mode Pomodoro Timer */}
-        {isZenMode && (
-          <div className="static md:absolute md:top-6 md:right-6 md:z-20 flex flex-col md:items-end gap-3 md:gap-1.5 group w-full md:w-auto mt-6 md:mt-0 bg-pink-50/50 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none">
-            
-            <div className="flex flex-col sm:flex-row md:flex-row items-center gap-3 md:opacity-80 md:group-hover:opacity-100 transition-opacity justify-between md:justify-end w-full md:w-auto">
-              <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:translate-x-4 md:group-hover:translate-x-0 w-full sm:w-auto justify-center">
-                <button 
-                  onClick={() => {
-                    if (onAdjustTimer) {
-                      onAdjustTimer(-5 * 60);
-                    } else if (setTimeLeft && setInitialTime) {
-                      setTimeLeft(prev => Math.max(0, prev - 5 * 60));
-                      setInitialTime(prev => Math.max(0, prev - 5 * 60));
-                    }
-                  }}
-                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                  title="Subtract 5m"
-                >
-                  <Minus size={16} />
-                </button>
-                <button 
-                  onClick={() => {
-                    if (onAdjustTimer) {
-                      onAdjustTimer(5 * 60);
-                    } else if (setTimeLeft && setInitialTime) {
-                      setTimeLeft(prev => prev + 5 * 60);
-                      setInitialTime(prev => prev + 5 * 60);
-                    }
-                  }}
-                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                  title="Add 5m"
-                >
-                  <Plus size={16} />
-                </button>
-                
-                <div className="w-px h-6 md:h-4 bg-pink-200 md:bg-pink-100 mx-1"></div>
-                
-                <button 
-                  onClick={() => {
-                    if (onToggleTimer) {
-                      onToggleTimer();
-                    } else if (setIsTimerRunning) {
-                      setIsTimerRunning(!isTimerRunning);
-                    }
-                  }}
-                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                  title={isTimerRunning ? "Pause" : "Play"}
-                >
-                  {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
-                </button>
-                <button 
-                  onClick={() => {
-                    if (onResetTimer) {
-                      onResetTimer();
-                    } else if (setTimeLeft && initialTime !== undefined && setIsTimerRunning) {
-                      setTimeLeft(initialTime);
-                      setIsTimerRunning(false);
-                    }
-                  }}
-                  className="p-3 md:p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-400 hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                  title="Reset"
-                >
-                  <RotateCcw size={16} />
-                </button>
-
-                {onFinishEarly && (isTimerRunning || (timeLeft !== undefined && initialTime !== undefined && timeLeft < initialTime)) && (
-                  <button
-                    onClick={onFinishEarly}
-                    className="px-2.5 py-1 text-xs font-semibold text-white bg-pink-500 hover:bg-pink-600 rounded-full transition-all shadow-xs flex items-center gap-1 active:scale-95"
-                    title="Finish session and log to focus analytics"
-                  >
-                    Finish Session
-                  </button>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-1.5">
-                <div className="hidden md:flex items-center">
-                  <AmbientSoundControl />
-                </div>
-                <button
-                  type="button"
-                  onClick={onToggleSoftHorizonMode}
-                  className="text-pink-500 md:text-pink-400 text-3xl sm:text-2xl md:text-xl font-medium tracking-widest font-mono select-none px-2 w-full sm:w-auto text-center sm:text-right hover:text-pink-600 transition-colors"
-                  title={isSoftHorizonMode ? "Switch to Exact Seconds ⏱️" : "Switch to Soft Horizon 🌸"}
-                >
-                  {isSoftHorizonMode
-                    ? ((timeLeft || 0) < 60 && (timeLeft || 0) > 0 ? '<1m' : `~${Math.max(1, Math.ceil((timeLeft || 0) / 60))}m`)
-                    : `${Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:${(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}`}
-                </button>
-                {onToggleZenMode && (
-                  <button 
-                    onClick={onToggleZenMode}
-                    className="hidden md:flex p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-100/50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                    title="Exit Zen View (Z)"
-                  >
-                    <Minimize2 size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center sm:justify-start md:justify-end gap-1.5 md:gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:-translate-y-2 md:group-hover:translate-y-0 w-full md:w-auto">
-              {[5, 10, 15, 20, 30].map(mins => (
-                <button
-                  key={mins}
-                  onClick={() => handleTimerChange && handleTimerChange(mins)}
-                  className="flex-1 sm:flex-none min-w-[44px] min-h-[44px] px-3 md:px-2 py-2 md:py-1 text-sm md:text-sm font-medium text-pink-400 md:text-pink-300 bg-white md:bg-transparent hover:text-pink-600 md:hover:text-pink-500 hover:bg-pink-100 md:hover:bg-pink-50 rounded-xl md:rounded-lg shadow-sm md:shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                >
-                  {mins}m
-                </button>
-              ))}
-            </div>
-
-          </div>
-        )}
       </div>
 
       <div className="flex-1 overflow-visible lg:overflow-y-auto mb-4 pr-0 md:pr-2 min-h-0 relative w-full max-w-full">
@@ -1026,9 +906,14 @@ function DailyTaskListComponent({
         )}
       </div>
 
-      <div className="pt-3 md:pt-4 border-t border-pink-50 mt-auto shrink-0">
+      <div className={`pt-3 md:pt-4 border-t border-pink-50 mt-auto shrink-0 transition-all ${
+        (isTimerRunning || (timeLeft !== undefined && initialTime !== undefined && timeLeft < initialTime && timeLeft > 0))
+          ? 'pb-24'
+          : ''
+      }`}>
         {!isAdding ? (
           <button 
+            type="button"
             onClick={() => setIsAdding(true)}
             className="w-full py-4 flex items-center justify-center gap-2 text-pink-400 font-medium hover:bg-pink-50 rounded-2xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
           >

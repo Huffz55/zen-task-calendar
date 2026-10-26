@@ -18,6 +18,7 @@ import {
   type AmbientSoundType 
 } from '../utils/ambientAudio';
 import { hapticLight } from '../utils/haptics';
+import { initAudioContext } from '../utils/audio';
 
 interface SoundOption {
   type: AmbientSoundType;
@@ -64,6 +65,7 @@ export function AmbientSoundControl({
 
   const handleToggleSound = (soundType: AmbientSoundType) => {
     hapticLight();
+    initAudioContext();
     if (soundType === 'none') {
       stopAllAmbientSounds();
       setActiveSounds([]);
@@ -93,8 +95,11 @@ export function AmbientSoundControl({
     <div className={`relative inline-block ${isOpen ? 'z-50' : 'z-20'}`} ref={containerRef}>
       {/* Trigger Pill Button */}
       <button
-        onClick={() => {
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
           hapticLight();
+          initAudioContext();
           setIsOpen(!isOpen);
         }}
         className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 flex items-center gap-1.5 shadow-sm border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 cursor-pointer ${
@@ -119,6 +124,7 @@ export function AmbientSoundControl({
       {/* Floating Popover Menu */}
       {isOpen && (
         <div
+          onClick={(e) => e.stopPropagation()}
           className={`absolute ${
             dropDirection === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
           } ${
