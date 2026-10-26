@@ -938,18 +938,14 @@ function DailyTaskListComponent({
         )}
       </div>
 
-      <div className={`pt-3 md:pt-4 border-t border-pink-50 mt-auto shrink-0 transition-all ${
-        (isTimerRunning || (timeLeft !== undefined && initialTime !== undefined && timeLeft < initialTime && timeLeft > 0))
-          ? 'pb-24'
-          : ''
-      }`}>
+      <div className="pt-2 md:pt-3 border-t border-pink-50 mt-auto shrink-0">
         {!isAdding ? (
           <button 
             type="button"
             onClick={() => setIsAdding(true)}
-            className="w-full py-4 flex items-center justify-center gap-2 text-pink-400 font-medium hover:bg-pink-50 rounded-2xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+            className="w-full py-2.5 md:py-3 flex items-center justify-center gap-2 text-pink-400 font-medium hover:bg-pink-50 rounded-2xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none cursor-pointer"
           >
-            <Plus size={20} />
+            <Plus size={18} />
             Add a new task
           </button>
         ) : (

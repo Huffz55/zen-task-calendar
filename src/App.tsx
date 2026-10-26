@@ -656,8 +656,8 @@ function App() {
       <div className="max-w-6xl w-full h-full min-h-0 overflow-hidden relative">
         
         {/* Tasks Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-32 ${
-          (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) ? 'lg:pb-20' : 'lg:pb-0'
+        <div className={`absolute inset-0 flex flex-col lg:flex-row gap-4 md:gap-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden lg:overflow-hidden pb-24 ${
+          (isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) ? 'lg:pb-16' : 'lg:pb-0'
         }
           ${activeTab === 'tasks' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 -translate-x-8 pointer-events-none invisible -z-10'}
         `}>
