@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Moon, CheckCircle2, Hourglass, Flame, Sparkles } from 'lucide-react';
-import { playSoftPop, playSingingBowl, triggerSakuraPetals } from '../utils/audio';
+import { playSoftPop } from '../utils/audio';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 interface EveningReviewModalProps {
@@ -36,19 +36,16 @@ export function EveningReviewModal({
   onRollover,
 }: EveningReviewModalProps) {
   useEffect(() => {
-    if (isOpen) {
-      playSingingBowl();
-      triggerSakuraPetals();
+    if (!isOpen) return;
 
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          onClose();
-        }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;

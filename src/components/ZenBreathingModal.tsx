@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Wind } from 'lucide-react';
 import { playSoftPop, playSingingBowl } from '../utils/audio';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
@@ -14,9 +14,13 @@ export function ZenBreathingModal({ isOpen, onClose }: ZenBreathingModalProps) {
   const [phase, setPhase] = useState<BreathPhase>('Inhale');
   const [scale, setScale] = useState(1);
   const [remainingSeconds, setRemainingSeconds] = useState(180); // 3-minute break
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      hasStartedRef.current = false;
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -26,7 +30,10 @@ export function ZenBreathingModal({ isOpen, onClose }: ZenBreathingModalProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    playSingingBowl();
+    if (!hasStartedRef.current) {
+      playSingingBowl();
+      hasStartedRef.current = true;
+    }
     let isMounted = true;
 
     // 4-4-4 rhythm

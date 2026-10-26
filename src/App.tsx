@@ -510,6 +510,12 @@ function App() {
     });
   }, [showToast]);
 
+  const handleCloseSyncModal = useCallback(() => setIsSyncModalOpen(false), []);
+  const handleCloseEveningReview = useCallback(() => setIsEveningReviewOpen(false), []);
+  const handleCloseZenBreathing = useCallback(() => setIsZenBreathingOpen(false), []);
+  const handleCloseMilestones = useCallback(() => setIsMilestonesOpen(false), []);
+  const handleCloseShortcuts = useCallback(() => setIsShortcutsOpen(false), []);
+
   const getAmbientBackground = () => {
     if (currentTheme === 'midnight') return "bg-[#121019]";
     if (currentTheme === 'matcha') return "bg-[#f2f7f3]";
@@ -1046,14 +1052,14 @@ function App() {
 
       <SyncModal
         isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
+        onClose={handleCloseSyncModal}
         onShowToast={showToast}
       />
 
       {/* Evening Review Modal */}
       <EveningReviewModal
         isOpen={isEveningReviewOpen}
-        onClose={() => setIsEveningReviewOpen(false)}
+        onClose={handleCloseEveningReview}
         completedTasks={dailyTasks.filter(t => t.isCompleted).length}
         totalTasks={dailyTasks.length}
         focusSeconds={focusStats.todayFocusSeconds}
@@ -1065,13 +1071,13 @@ function App() {
       {/* Zen Breathing Modal */}
       <ZenBreathingModal
         isOpen={isZenBreathingOpen}
-        onClose={() => setIsZenBreathingOpen(false)}
+        onClose={handleCloseZenBreathing}
       />
 
       {/* Zen Milestones Modal */}
       <ZenMilestonesModal
         isOpen={isMilestonesOpen}
-        onClose={() => setIsMilestonesOpen(false)}
+        onClose={handleCloseMilestones}
         tasks={tasks}
         currentStreak={currentStreak}
         totalFocusSeconds={focusStats.totalFocusSeconds}
@@ -1080,7 +1086,7 @@ function App() {
       {/* Keyboard Shortcuts Cheatsheet Modal */}
       <ShortcutsModal
         isOpen={isShortcutsOpen}
-        onClose={() => setIsShortcutsOpen(false)}
+        onClose={handleCloseShortcuts}
       />
 
       {/* Floating Mini Focus Player (Visible on Tasks / Lists when Timer is active) */}
