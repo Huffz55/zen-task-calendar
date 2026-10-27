@@ -68,12 +68,6 @@ export function ZenMoreMenu({
         aria-expanded={isOpen}
       >
         <MoreHorizontal size={18} className="transition-transform group-hover:scale-110" />
-        {isEvening && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-pink-500" />
-          </span>
-        )}
       </button>
 
       {/* Floating Popover Menu */}
@@ -96,22 +90,11 @@ export function ZenMoreMenu({
               className="w-full flex items-center justify-between p-2.5 rounded-2xl text-left hover:bg-pink-50/70 transition-all text-xs group cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                  isEvening
-                    ? 'bg-gradient-to-tr from-pink-500 to-rose-400 text-white shadow-xs'
-                    : 'bg-pink-50 text-pink-600'
-                }`}>
+                <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center transition-colors">
                   <Moon size={15} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-gray-800">Evening Wind-Down</span>
-                    {isEvening && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-600">
-                        Ready
-                      </span>
-                    )}
-                  </div>
+                  <span className="font-semibold text-gray-800">Evening Wind-Down</span>
                   <p className="text-[10px] text-gray-400">Reflect & close your day</p>
                 </div>
               </div>
