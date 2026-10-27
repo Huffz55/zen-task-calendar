@@ -72,7 +72,7 @@ export function EveningReviewModal({
         <div className="w-14 h-14 rounded-2xl bg-pink-100/80 text-pink-500 mx-auto flex items-center justify-center shadow-inner mb-3">
           <Moon size={26} />
         </div>
-        <h3 className="text-xl font-bold text-gray-800">Evening Wind-Down 🌙</h3>
+        <h3 className="text-xl font-bold text-gray-800">Evening Review</h3>
         <p className="text-xs text-gray-400 mt-1">
           Review your accomplishments and clear your mind
         </p>
@@ -133,7 +133,7 @@ export function EveningReviewModal({
             className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white font-bold text-xs rounded-xl shadow-md shadow-pink-200 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
           >
             <Sparkles size={16} />
-            <span>Roll over {overdueCount} remaining to tomorrow & rest 🌸</span>
+            <span>Roll over {overdueCount} remaining to tomorrow</span>
           </button>
         ) : (
           <button
@@ -144,7 +144,7 @@ export function EveningReviewModal({
             }}
             className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white font-bold text-xs rounded-xl shadow-md shadow-pink-200 transition-all active:scale-98 cursor-pointer"
           >
-            Rest & Sleep Peacefully 🌸
+            Done
           </button>
         )}
       </div>

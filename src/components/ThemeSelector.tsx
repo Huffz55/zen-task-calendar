@@ -153,7 +153,7 @@ function ThemeSelectorComponent({
             <div className="pt-2 mt-2 border-t border-pink-50 flex items-center justify-between px-1">
               <div className="flex items-center gap-1.5 text-gray-700">
                 <span className="text-xs">🌙</span>
-                <span className="text-[11px] font-medium">Auto Night Shift (20:00)</span>
+                <span className="text-[11px] font-medium">Auto Night Shift</span>
               </div>
               <button
                 type="button"

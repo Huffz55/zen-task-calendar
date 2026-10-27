@@ -644,10 +644,10 @@ function App() {
             type="button"
             onClick={exitZenMode}
             className="flex items-center gap-1.5 px-4 py-2 bg-white/90 hover:bg-white text-pink-600 rounded-full border border-pink-200 shadow-xs text-xs font-semibold transition-all active:scale-95 cursor-pointer"
-            title="Exit Zen View (Z or Esc)"
+            title="Exit Zen View"
           >
             <Minimize2 size={14} />
-            <span>Exit Zen View (Z)</span>
+            <span>Exit Zen View</span>
           </button>
           <button
             type="button"
@@ -656,9 +656,9 @@ function App() {
               setActiveTab('focus');
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white rounded-full shadow-xs text-xs font-semibold transition-all active:scale-95 cursor-pointer"
-            title="Go to Focus Timer Tab (F)"
+            title="Focus Screen"
           >
-            <span>Focus Screen (F) →</span>
+            <span>Focus Screen →</span>
           </button>
           {(isTimerRunning || (timeLeft < initialTime && timeLeft > 0)) && (
             <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-pink-200/90 shadow-sm px-3 py-1.5 rounded-full">
@@ -975,8 +975,7 @@ function App() {
                 className="px-4 py-2 bg-white/70 hover:bg-pink-50 border border-pink-100/80 rounded-2xl text-xs font-semibold text-pink-600 transition-all shadow-xs flex items-center gap-2 hover:scale-102 active:scale-95 cursor-pointer"
               >
                 <Wind size={15} className="text-pink-400" />
-                <span>Take a Zen Break (4-4-4 Breathing)</span>
-                <span>🌸</span>
+                <span>Box Breathing</span>
               </button>
             </div>
 
@@ -986,7 +985,7 @@ function App() {
                 type="button"
                 onClick={() => setShowAnalytics(prev => !prev)}
                 className="px-4 py-2 rounded-full bg-white/60 hover:bg-white text-gray-500 hover:text-pink-600 border border-pink-100 hover:border-pink-200 text-xs font-semibold transition-all duration-200 shadow-2xs flex items-center gap-2 cursor-pointer active:scale-95"
-                title="Toggle Weekly Focus Analytics & Activity Matrix"
+                title="Toggle Focus Analytics"
               >
                 <BarChart2 size={14} className={showAnalytics ? "text-pink-500" : "text-gray-400"} />
                 <span>{showAnalytics ? 'Hide Rhythm & Focus History' : 'View Rhythm & Focus History'}</span>

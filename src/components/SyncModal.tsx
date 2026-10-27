@@ -201,7 +201,7 @@ export function SyncModal({ isOpen, onClose, onShowToast }: SyncModalProps) {
                   className="text-[11px] font-medium text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
                 >
                   <Sparkles size={12} />
-                  <span>Generate New Key (Unlink)</span>
+                  <span>Generate New Key</span>
                 </button>
               </div>
             )}

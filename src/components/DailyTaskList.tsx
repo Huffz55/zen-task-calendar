@@ -798,7 +798,7 @@ function DailyTaskListComponent({
                                     className="w-full px-3 py-2 text-left hover:bg-pink-50/80 flex items-center gap-2.5 transition-colors cursor-pointer"
                                   >
                                     <Star size={13} className={task.isPinned ? "fill-amber-500 text-amber-500" : "text-gray-400"} />
-                                    <span>{task.isPinned ? 'Unpin Focus Goal' : 'Focus of the Day ⭐'}</span>
+                                    <span>{task.isPinned ? 'Unpin Focus Goal' : 'Set as Focus of the Day'}</span>
                                   </button>
                                 )}
 
@@ -813,7 +813,7 @@ function DailyTaskListComponent({
                                     className="w-full px-3 py-2 text-left hover:bg-pink-50/80 flex items-center gap-2.5 transition-colors cursor-pointer"
                                   >
                                     <ArrowRight size={13} className="text-gray-400" />
-                                    <span>Defer to Tomorrow 📅</span>
+                                    <span>Defer to Tomorrow</span>
                                   </button>
                                 )}
 
@@ -828,7 +828,7 @@ function DailyTaskListComponent({
                                     className="w-full px-3 py-2 text-left hover:bg-pink-50/80 flex items-center gap-2.5 transition-colors cursor-pointer"
                                   >
                                     <Copy size={13} className="text-gray-400" />
-                                    <span>Duplicate Task 📋</span>
+                                    <span>Duplicate Task</span>
                                   </button>
                                 )}
 
@@ -853,7 +853,7 @@ function DailyTaskListComponent({
                                   className="w-full px-3 py-2 text-left hover:bg-pink-50/80 flex items-center gap-2.5 transition-colors cursor-pointer"
                                 >
                                   <Pencil size={13} className="text-gray-400" />
-                                  <span>Rename (Edit)</span>
+                                  <span>Rename</span>
                                 </button>
                               </div>
                             )}
@@ -1009,7 +1009,7 @@ function DailyTaskListComponent({
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="What would you like to achieve? (Press Enter to save)"
+              placeholder="What would you like to achieve?"
               className="w-full bg-transparent px-1 py-1.5 text-sm md:text-base text-gray-800 placeholder-gray-400 focus-visible:outline-none"
             />
 
@@ -1146,7 +1146,7 @@ function DailyTaskListComponent({
                         }
                       }
                     }}
-                    placeholder="Add step... (Enter)"
+                    placeholder="Add step..."
                     className="flex-1 bg-white border border-pink-100 rounded-lg px-2.5 py-1 text-xs text-gray-700 placeholder-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pink-300"
                   />
                   <button
@@ -1252,7 +1252,7 @@ function DailyTaskListComponent({
                       ? 'bg-amber-100 text-amber-700 font-semibold'
                       : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
                   }`}
-                  title="Focus of the Day (Priority)"
+                  title="Set as Focus of the Day"
                 >
                   <Star size={13} className={newIsPinned ? 'fill-amber-500 text-amber-500' : ''} />
                   <span className="text-[11px] hidden sm:inline">Priority</span>
@@ -1282,7 +1282,7 @@ function DailyTaskListComponent({
                   }}
                   className="px-2.5 py-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-xs font-medium cursor-pointer"
                 >
-                  Cancel (Esc)
+                  Cancel
                 </button>
                 <button 
                   type="submit"

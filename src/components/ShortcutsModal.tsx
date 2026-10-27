@@ -26,7 +26,7 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   {
     keyDisplay: ['Z'],
     action: 'Zen View',
-    description: 'Toggle distraction-free view (collapse calendar & expand tasks)',
+    description: 'Toggle distraction-free view',
   },
   {
     keyDisplay: ['T'],
@@ -102,7 +102,7 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-pink-50 rounded-full transition-colors"
-            title="Close (Esc)"
+            title="Close"
           >
             <X size={18} />
           </button>

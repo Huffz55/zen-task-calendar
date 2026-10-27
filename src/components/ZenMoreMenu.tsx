@@ -63,7 +63,7 @@ export function ZenMoreMenu({
             ? 'bg-white text-pink-600 border-pink-300 ring-2 ring-pink-100 shadow-md'
             : 'text-gray-500 hover:text-pink-600 hover:bg-white border-pink-100/80 hover:border-pink-200'
         }`}
-        title="More Actions & Sanctuaries (Sync, Review, Badges, Shortcuts)"
+        title="More Options"
         aria-label="More Actions"
         aria-expanded={isOpen}
       >
@@ -178,7 +178,7 @@ export function ZenMoreMenu({
           {/* Footer quote */}
           <div className="mt-2 pt-2 border-t border-pink-50 text-center">
             <p className="text-[10px] text-gray-400 italic">
-              "Simplicity is the quiet path to focus." 🌸
+              "Simplicity is the quiet path to focus."
             </p>
           </div>
         </div>
