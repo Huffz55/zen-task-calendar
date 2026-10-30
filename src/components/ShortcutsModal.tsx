@@ -15,53 +15,53 @@ interface ShortcutItem {
 const SHORTCUT_LIST: ShortcutItem[] = [
   {
     keyDisplay: ['J', 'K'],
-    action: 'Vim Gezinme',
-    description: 'Görevler arasında aşağı (J) ve yukarı (K) fareye dokunmadan ak',
+    action: 'Navigate Tasks',
+    description: 'Move down (J) and up (K) smoothly without touching the mouse',
   },
   {
     keyDisplay: ['E'],
-    action: 'Görevi Tamamla',
-    description: 'Seçili görevi anında 0. milisaniyede tamamla / geri al',
+    action: 'Toggle Complete',
+    description: 'Instant optimistic completion or uncompletion of the focused task',
   },
   {
     keyDisplay: ['M'],
-    action: 'Bu Akşam (Things 3)',
-    description: 'Seçili görevi mesai sonrasına / Bu Akşam bölümüne taşı',
+    action: 'This Evening',
+    description: 'Move focused task to the This Evening section (after 6:00 PM)',
   },
   {
     keyDisplay: ['G'],
-    action: 'Hayalet Blok (Amie)',
-    description: 'Seçili görevi yarı saydam "vaktim kalırsa" hayalet bloğuna dönüştür',
+    action: 'Ghost Block',
+    description: 'Toggle focused task as a tentative/optional ghost block',
   },
   {
     keyDisplay: ['1', '2', '3'],
-    action: 'Hızlı Süre',
-    description: 'Seçili göreve tek tuşla 15 dk (1), 30 dk (2) veya 60 dk (3) planla',
+    action: 'Quick Duration',
+    description: 'Assign estimated duration: 15m (1), 30m (2), or 60m (3)',
   },
   {
     keyDisplay: ['N'],
-    action: 'Yeni Görev',
-    description: 'Doğrudan yeni görev giriş kutusuna odaklan',
+    action: 'New Task',
+    description: 'Focus directly on the add task input',
   },
   {
     keyDisplay: ['T'],
-    action: 'Bugüne Git / Taşı',
-    description: "Takvimi bugüne getir veya seçili görevi bugüne taşı",
+    action: 'Today / Defer',
+    description: 'Move selected task to today or focus on today in calendar',
   },
   {
     keyDisplay: ['Space'],
-    action: 'Sayaç Başlat / Durdur',
-    description: 'Aktif Zen odaklanma sayacını duraklat veya sürdür',
+    action: 'Timer Play / Pause',
+    description: 'Pause or resume the active Zen focus timer',
   },
   {
     keyDisplay: ['?'],
-    action: 'Kısayollar Kılavuzu',
-    description: 'Bu hızlı klavye rehberini aç veya kapat',
+    action: 'Shortcuts Guide',
+    description: 'Open or close this keyboard cheat sheet',
   },
   {
     keyDisplay: ['Esc'],
-    action: 'Çıkış / İptal',
-    description: 'Pencereleri kapat, seçimi sıfırla veya odak modundan çık',
+    action: 'Dismiss / Close',
+    description: 'Close modals, clear input, or exit focus',
   },
 ];
 

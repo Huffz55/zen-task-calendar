@@ -178,8 +178,6 @@ function DailyTaskListComponent({
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
   const [expandedTaskIds, setExpandedTaskIds] = useState<Record<string, boolean>>({});
   const [inlineSubtaskInputs, setInlineSubtaskInputs] = useState<Record<string, string>>({});
-  const [newIsEvening, setNewIsEvening] = useState(false);
-  const [newIsGhost, setNewIsGhost] = useState(false);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -362,8 +360,8 @@ function DailyTaskListComponent({
       subtaskObjects,
       newEstimatedMinutes,
       newIsPinned,
-      newIsEvening,
-      newIsGhost
+      false, // isEvening
+      false // isGhost
     );
     setNewTaskTitle('');
     setSelectedTag(undefined);
@@ -372,8 +370,6 @@ function DailyTaskListComponent({
     setNewSubtaskInput('');
     setNewEstimatedMinutes(undefined);
     setNewIsPinned(false);
-    setNewIsEvening(false);
-    setNewIsGhost(false);
     setActiveAddDrawer(null);
     setIsAdding(false);
   };
@@ -570,7 +566,7 @@ function DailyTaskListComponent({
                   type="button"
                   onClick={onOpenTriage}
                   className="px-2.5 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
-                  title="Görev Karantinası / Sunsama Triage Ritüeli"
+                  title="Inbox & Triage Ritual"
                 >
                   <Inbox size={14} />
                   <span className="hidden sm:inline">Triage</span>
@@ -737,15 +733,14 @@ function DailyTaskListComponent({
               return (
                 <React.Fragment key={task.id}>
                   {isFirstEvening && (
-                    <li key="evening-divider" className="pt-3 pb-1 border-t border-dashed border-indigo-200/80 list-none">
+                    <li key="evening-divider" className="pt-4 pb-1 border-t border-dashed border-indigo-200/80 list-none">
                       <div className="flex items-center justify-between px-1 text-xs font-semibold text-indigo-700 tracking-wide">
                         <div className="flex items-center gap-1.5">
                           <Moon size={14} className="text-indigo-500 fill-indigo-100" />
-                          <span>Bu Akşam</span>
-                          <span className="text-[10px] font-normal text-indigo-500 opacity-80">(This Evening)</span>
+                          <span>This Evening</span>
                         </div>
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100/80">
-                          18:00 sonrası odaklan
+                          After 6:00 PM
                         </span>
                       </div>
                     </li>
@@ -768,7 +763,7 @@ function DailyTaskListComponent({
                       : task.isPinned && !task.isCompleted
                       ? 'border-amber-300 bg-amber-50/20 hover:bg-amber-50/40 shadow-xs'
                       : 'border-pink-50 hover:bg-pink-50/50'
-                  } ${focusedTaskId === task.taskId ? 'ring-2 ring-emerald-500/80 shadow-md scale-[1.01]' : ''}`}
+                  } ${focusedTaskId === task.taskId ? 'ring-1.5 ring-pink-400/80 bg-pink-50/20 shadow-xs' : ''}`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
@@ -815,24 +810,17 @@ function DailyTaskListComponent({
 
                           {/* Ghost Badge */}
                           {task.isGhost && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50/90 text-indigo-600 shrink-0" title="Hayalet Blok (Amie/Cron) - Vaktim kalırsa">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50/90 text-indigo-600 shrink-0" title="Ghost Block (Amie/Cron) - Tentative goal">
                               <span>👻</span>
-                              <span>Hayalet</span>
+                              <span>Ghost</span>
                             </span>
                           )}
 
                           {/* Evening Badge */}
                           {task.isEvening && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50/90 text-purple-600 shrink-0" title="Bu Akşam (Things 3)">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50/90 text-purple-600 shrink-0" title="This Evening (Things 3) - For after 6:00 PM">
                               <span>🌙</span>
-                              <span>Bu Akşam</span>
-                            </span>
-                          )}
-
-                          {/* Keyboard Vim Active Indicator */}
-                          {focusedTaskId === task.taskId && (
-                            <span className="inline-flex items-center text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200/80 shrink-0">
-                              Vim [J/K/E/M/G]
+                              <span>Evening</span>
                             </span>
                           )}
 
@@ -981,7 +969,7 @@ function DailyTaskListComponent({
                                     className="w-full px-3 py-2 text-left hover:bg-purple-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                                   >
                                     <Moon size={13} className={task.isEvening ? "fill-purple-500 text-purple-500" : "text-gray-400"} />
-                                    <span>{task.isEvening ? 'Gündüze Al' : 'Bu Akşam (Things 3)'}</span>
+                                    <span>{task.isEvening ? 'Move to Daytime' : 'Move to This Evening'}</span>
                                   </button>
                                 )}
 
@@ -996,7 +984,7 @@ function DailyTaskListComponent({
                                     className="w-full px-3 py-2 text-left hover:bg-indigo-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                                   >
                                     <Ghost size={13} className={task.isGhost ? "text-indigo-500" : "text-gray-400"} />
-                                    <span>{task.isGhost ? 'Katı Bloğa Çevir' : 'Hayalet Blok (Amie)'}</span>
+                                    <span>{task.isGhost ? 'Turn into Solid Task' : 'Turn into Ghost Block'}</span>
                                   </button>
                                 )}
 
@@ -1011,7 +999,7 @@ function DailyTaskListComponent({
                                     className="w-full px-3 py-2 text-left hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                                   >
                                     <Inbox size={13} className="text-gray-400" />
-                                    <span>Karantina Havuzuna At (Sunsama)</span>
+                                    <span>Move to Inbox</span>
                                   </button>
                                 )}
 
@@ -1250,20 +1238,6 @@ function DailyTaskListComponent({
                     <button type="button" onClick={() => setNewIsPinned(false)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
                   </span>
                 )}
-                {newIsEvening && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700">
-                    <Moon size={10} className="fill-purple-500 text-purple-500" />
-                    <span>Bu Akşam</span>
-                    <button type="button" onClick={() => setNewIsEvening(false)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
-                  </span>
-                )}
-                {newIsGhost && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700">
-                    <Ghost size={10} className="text-indigo-600" />
-                    <span>Hayalet Blok</span>
-                    <button type="button" onClick={() => setNewIsGhost(false)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
-                  </span>
-                )}
                 {recurrence !== 'none' && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border border-pink-200 bg-white text-gray-600">
                     <span>🔁 {recurrence === 'daily' ? 'Daily' : recurrence === 'weekly' ? 'Weekly' : 'Bi-weekly'}</span>
@@ -1498,40 +1472,6 @@ function DailyTaskListComponent({
                 >
                   <span>🔁</span>
                   <span className="text-[11px] hidden sm:inline">{recurrence !== 'none' ? recurrence : 'Repeat'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    hapticLight();
-                    setNewIsEvening(prev => !prev);
-                  }}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
-                    newIsEvening
-                      ? 'bg-purple-100 text-purple-700 font-semibold'
-                      : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
-                  }`}
-                  title="Things 3: Bu Akşam"
-                >
-                  <Moon size={12} className={newIsEvening ? "fill-purple-500 text-purple-500" : ""} />
-                  <span className="text-[11px] hidden sm:inline">Bu Akşam</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    hapticLight();
-                    setNewIsGhost(prev => !prev);
-                  }}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
-                    newIsGhost
-                      ? 'bg-indigo-100 text-indigo-700 font-semibold'
-                      : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
-                  }`}
-                  title="Amie/Cron: Hayalet Blok (Vaktim kalırsa)"
-                >
-                  <Ghost size={12} className={newIsGhost ? "text-indigo-600" : ""} />
-                  <span className="text-[11px] hidden sm:inline">Hayalet</span>
                 </button>
               </div>
 

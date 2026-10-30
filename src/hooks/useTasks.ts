@@ -21,6 +21,7 @@ function cleanupOldCompletedTasks(rawTasks: Task[]): { cleaned: Task[]; removedC
     if (!isCompleted) return true; // Keep incomplete tasks
 
     // Check if task date is older than 30 days
+    if (!task.date || typeof task.date !== 'string') return true;
     const taskDate = parseISO(task.date);
     if (!isValid(taskDate)) return true; // Keep if invalid to avoid data loss
 
@@ -37,12 +38,20 @@ function cleanupOldCompletedTasks(rawTasks: Task[]): { cleaned: Task[]; removedC
 export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
   const [tasks, setTasks] = useState<Task[]>(() => {
     const loaded = storage.loadTasks();
-    const { cleaned, removedCount } = cleanupOldCompletedTasks(loaded);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const sanitized = loaded.map(t => {
+      const safeTitle = typeof t.title === 'string'
+        ? t.title
+        : (typeof (t.title as any)?.title === 'string' ? (t.title as any).title : 'Untitled');
+      const safeDate = (t.date && typeof t.date === 'string') ? t.date : todayStr;
+      return { ...t, title: safeTitle, date: safeDate };
+    });
+    const { cleaned, removedCount } = cleanupOldCompletedTasks(sanitized);
     if (removedCount > 0) {
       storage.saveTasks(cleaned);
       return cleaned;
     }
-    return loaded;
+    return sanitized;
   });
 
   // Save to storage repository whenever tasks change
@@ -93,8 +102,8 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
   }, []);
 
   const addTask = useCallback((
-    title: string,
-    date: string,
+    title: string | { title?: string; isInbox?: boolean },
+    date?: string,
     recurrence: RecurrenceType = 'none',
     tag?: TaskTag,
     subtasks?: Subtask[],
@@ -104,11 +113,29 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     isGhost?: boolean,
     isInbox?: boolean
   ) => {
+    let finalTitle = '';
+    let finalIsInbox = isInbox;
+
+    if (typeof title === 'string') {
+      finalTitle = title.trim();
+    } else if (title && typeof title === 'object') {
+      finalTitle = typeof title.title === 'string' ? title.title.trim() : '';
+      if (title.isInbox !== undefined) {
+        finalIsInbox = title.isInbox;
+      }
+    }
+
+    if (!finalTitle) return;
+
+    const safeDate = (typeof date === 'string' && date.trim())
+      ? date.trim()
+      : format(new Date(), 'yyyy-MM-dd');
+
     const newTask: Task = {
       id: uuidv4(),
-      title,
-      date, // this acts as the start date
-      recurrence,
+      title: finalTitle,
+      date: safeDate,
+      recurrence: recurrence || 'none',
       tag,
       completedDates: [],
       subtasks: subtasks && subtasks.length > 0 ? subtasks : undefined,
@@ -116,7 +143,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       isPinned: isPinned || undefined,
       isEvening: isEvening || undefined,
       isGhost: isGhost || undefined,
-      isInbox: isInbox || undefined,
+      isInbox: finalIsInbox || undefined,
     };
     setTasks(prev => [...prev, newTask]);
   }, []);
@@ -180,7 +207,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
 
     return tasks.filter(task => {
       // Archived or inbox tasks do not appear in active daily schedule
-      if (task.isArchived || task.isInbox) return false;
+      if (!task || task.isArchived || task.isInbox || !task.date || typeof task.date !== 'string') return false;
 
       const startDate = parseISO(task.date);
       if (!isValid(startDate)) return false;
@@ -458,7 +485,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
   const rolloverOverdueTasks = useCallback((targetDateStr: string) => {
     let count = 0;
     setTasks(prev => prev.map(task => {
-      if (task.isArchived) return task;
+      if (task.isArchived || !task.date) return task;
       const isNonRecurring = !task.recurrence || task.recurrence === 'none';
       const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
       const isOverdue = task.date < targetDateStr;
@@ -477,7 +504,7 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
 
   const getOverdueTasksCount = useCallback((todayStr: string) => {
     return tasks.filter(task => {
-      if (task.isArchived) return false;
+      if (task.isArchived || !task.date) return false;
       const isNonRecurring = !task.recurrence || task.recurrence === 'none';
       const isCompleted = (Array.isArray(task.completedDates) ? task.completedDates : []).includes(task.date);
       const isOverdue = task.date < todayStr;
@@ -485,14 +512,14 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     }).length;
   }, [tasks]);
 
-  // Silent Görev Mezarlığı: Auto-archive non-recurring incomplete tasks older than 14 days
+  // Silent Cemetery: Auto-archive non-recurring incomplete tasks older than 14 days
   const autoArchiveNeglectedTasks = useCallback((currentDateStr: string) => {
     const today = parseISO(currentDateStr);
     if (!isValid(today)) return 0;
 
     let archivedCount = 0;
     setTasks(prev => prev.map(task => {
-      if (task.isArchived) return task;
+      if (task.isArchived || !task.date) return task;
       const isNonRecurring = !task.recurrence || task.recurrence === 'none';
       if (!isNonRecurring) return task;
 

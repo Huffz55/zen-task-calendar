@@ -15,8 +15,8 @@ export function generateICSContent(tasks: Task[]): string {
       const descParts = [];
       if (t.tag) descParts.push(`Tag: ${t.tag}`);
       if (t.estimatedMinutes) descParts.push(`Est: ${t.estimatedMinutes}m`);
-      if (t.isEvening) descParts.push(`Bu Akşam (This Evening)`);
-      if (t.isGhost) descParts.push(`Hayalet Blok (Ghost)`);
+      if (t.isEvening) descParts.push(`This Evening (After 6:00 PM)`);
+      if (t.isGhost) descParts.push(`Ghost Block (Tentative)`);
       const description = descParts.join(' | ');
 
       return [
@@ -76,19 +76,20 @@ export function generateMarkdownContent(tasks: Task[]): string {
       let meta = '';
       if (t.tag) meta += ` #${t.tag}`;
       if (t.estimatedMinutes) meta += ` ⏱️${t.estimatedMinutes}m`;
-      if (t.isEvening) meta += ' 🌙 [Bu Akşam]';
-      if (t.isGhost) meta += ' 👻 [Hayalet Blok]';
+      if (t.isEvening) meta += ' 🌙 [Evening]';
+      if (t.isGhost) meta += ' 👻 [Ghost]';
       lines.push(`- [${mark}] ${t.title}${meta}`);
     }
     lines.push('');
   }
 
   if (inboxTasks.length > 0) {
-    lines.push('## 📥 Gelen Kutusu / Triage (Karantina Havuzu)');
+    lines.push('## 📥 Inbox & Triage');
     for (const t of inboxTasks) {
       let meta = '';
       if (t.tag) meta += ` #${t.tag}`;
       if (t.estimatedMinutes) meta += ` ⏱️${t.estimatedMinutes}m`;
+      if (t.isGhost) meta += ' 👻 [Ghost]';
       lines.push(`- [ ] ${t.title}${meta}`);
     }
     lines.push('');

@@ -1200,10 +1200,18 @@ function App() {
         inboxTasks={inboxTasks}
         onTriageDecision={triageTask}
         onQuickAddTask={(title) => {
-          addTask({
+          addTask(
             title,
-            isInbox: true,
-          });
+            format(new Date(), 'yyyy-MM-dd'),
+            'none',
+            undefined,
+            undefined,
+            undefined,
+            false,
+            false,
+            false,
+            true
+          );
         }}
       />
 

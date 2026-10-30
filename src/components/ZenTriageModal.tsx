@@ -96,7 +96,7 @@ export function ZenTriageModal({
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-          title="Kapat (Esc)"
+          title="Close (Esc)"
         >
           <X size={18} />
         </button>
@@ -108,13 +108,13 @@ export function ZenTriageModal({
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <span>Görev Karantinası (Triage)</span>
+              <span>Inbox & Triage</span>
               <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100/70 text-amber-800">
-                {inboxTasks.length} Bekleyen
+                {inboxTasks.length} Pending
               </span>
             </h2>
             <p className="text-xs text-gray-500">
-              Sunsama tarzı zihinsel ayıklama: Gün ortasında aklına geleni havuza at, tek tek karar ver.
+              Mindful Inbox: Capture unscheduled thoughts now, process them with clarity later.
             </p>
           </div>
         </div>
@@ -126,15 +126,15 @@ export function ZenTriageModal({
               type="text"
               value={newInboxTitle}
               onChange={e => setNewInboxTitle(e.target.value)}
-              placeholder="Aklına bir fikir veya görev mi geldi? Havuza ekle..."
+              placeholder="Capture a thought or task to triage later..."
               className="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none text-gray-800 placeholder-gray-400"
             />
             <button
               type="submit"
               disabled={!newInboxTitle.trim()}
-              className="px-3.5 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-xs"
+              className="px-3.5 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-xs cursor-pointer"
             >
-              <span>Havuza At</span>
+              <span>Add to Inbox</span>
               <CornerDownLeft size={13} />
             </button>
           </div>
@@ -145,7 +145,7 @@ export function ZenTriageModal({
           <div className="space-y-4">
             <div className="p-5 rounded-2xl bg-gradient-to-br from-pink-50/50 via-white to-amber-50/30 border border-pink-100/80 shadow-sm">
               <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span>Havuz Görevi {currentIndex + 1} / {inboxTasks.length}</span>
+                <span>Inbox Item {currentIndex + 1} of {inboxTasks.length}</span>
                 {currentTask.tag && (
                   <span className="px-2 py-0.5 rounded-md bg-white border border-gray-100 text-gray-600 font-medium">
                     #{currentTask.tag}
@@ -166,10 +166,10 @@ export function ZenTriageModal({
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs">
                   <CheckCircle2 size={16} />
-                  <span>Bugüne Al</span>
+                  <span>Do Today</span>
                 </div>
                 <span className="text-[10px] text-emerald-600/70 mt-1 font-mono group-hover:text-emerald-700">
-                  Tuş: [ D ]
+                  Key: [ D ]
                 </span>
               </button>
 
@@ -180,10 +180,10 @@ export function ZenTriageModal({
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs">
                   <Clock size={16} />
-                  <span>Beklet / Sonra</span>
+                  <span>Someday / Later</span>
                 </div>
                 <span className="text-[10px] text-amber-600/70 mt-1 font-mono group-hover:text-amber-700">
-                  Tuş: [ W ]
+                  Key: [ W ]
                 </span>
               </button>
 
@@ -194,10 +194,10 @@ export function ZenTriageModal({
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs">
                   <Trash2 size={16} />
-                  <span>Acımadan Sil</span>
+                  <span>Delete</span>
                 </div>
                 <span className="text-[10px] text-rose-600/70 mt-1 font-mono group-hover:text-rose-700">
-                  Tuş: [ ⌫ ]
+                  Key: [ ⌫ ]
                 </span>
               </button>
             </div>
@@ -207,21 +207,21 @@ export function ZenTriageModal({
             <div className="w-14 h-14 mx-auto rounded-3xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
               <Sparkles size={26} />
             </div>
-            <h3 className="text-base font-bold text-gray-800">Gelen Kutusu Tertemiz (Zero Inbox)</h3>
+            <h3 className="text-base font-bold text-gray-800">Inbox Zero</h3>
             <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Karantinada bekleyen hiçbir dağınık görev yok. Zihnin ferah, tüm işler takvimde net.
+              No pending thoughts in your inbox. Your calendar and mind are clear.
             </p>
           </div>
         )}
 
         {/* Footer shortcuts helper */}
         <div className="mt-6 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
-          <span>Klavye Kısayolları: <strong>D</strong> (Bugün), <strong>W</strong> (Beklet), <strong>Backspace</strong> (Sil)</span>
+          <span>Shortcuts: <strong>D</strong> (Do Today), <strong>W</strong> (Someday), <strong>Backspace</strong> (Delete)</span>
           <button
             onClick={onClose}
             className="text-pink-600 hover:text-pink-700 font-semibold cursor-pointer"
           >
-            Tamamla
+            Done
           </button>
         </div>
       </div>
