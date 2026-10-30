@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Task } from '../types';
+import type { Task } from '../types';
 import { Inbox, CheckCircle2, Trash2, Clock, Sparkles, X, ArrowRight, CornerDownLeft } from 'lucide-react';
 import { playWaterDrop, playBambooTap, playSoftPop } from '../utils/audio';
 import { hapticLight, hapticSuccess } from '../utils/haptics';

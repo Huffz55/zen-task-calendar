@@ -1,4 +1,4 @@
-import { Task } from '../types';
+import type { Task } from '../types';
 
 export function generateICSContent(tasks: Task[]): string {
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
