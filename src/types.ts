@@ -20,6 +20,9 @@ export interface Task {
   subtasks?: Subtask[];
   focusedSeconds?: number;
   isPinned?: boolean; // One Big Thing / Focus of the Day
+  isEvening?: boolean; // Things 3: This Evening (Bu Akşam) distinction
+  isGhost?: boolean; // Amie / Cron: Ghost Block (Hayalet Blok - tentative)
+  isInbox?: boolean; // Sunsama: Triage / Quarantine inbox
   estimatedMinutes?: number; // Estimated duration in minutes
   isArchived?: boolean; // Auto-archived to Zen Cemetery (Görev Mezarlığı)
   archivedAt?: string; // YYYY-MM-DD
@@ -36,6 +39,9 @@ export interface DailyTask {
   subtasks?: Subtask[];
   focusedSeconds?: number;
   isPinned?: boolean;
+  isEvening?: boolean;
+  isGhost?: boolean;
+  isInbox?: boolean;
   estimatedMinutes?: number;
   isArchived?: boolean;
 }

@@ -99,7 +99,10 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     tag?: TaskTag,
     subtasks?: Subtask[],
     estimatedMinutes?: number,
-    isPinned?: boolean
+    isPinned?: boolean,
+    isEvening?: boolean,
+    isGhost?: boolean,
+    isInbox?: boolean
   ) => {
     const newTask: Task = {
       id: uuidv4(),
@@ -111,6 +114,9 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       subtasks: subtasks && subtasks.length > 0 ? subtasks : undefined,
       estimatedMinutes: estimatedMinutes && estimatedMinutes > 0 ? estimatedMinutes : undefined,
       isPinned: isPinned || undefined,
+      isEvening: isEvening || undefined,
+      isGhost: isGhost || undefined,
+      isInbox: isInbox || undefined,
     };
     setTasks(prev => [...prev, newTask]);
   }, []);
@@ -173,8 +179,8 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     if (!isValid(targetDate)) return [];
 
     return tasks.filter(task => {
-      // Archived tasks do not appear in active daily schedule
-      if (task.isArchived) return false;
+      // Archived or inbox tasks do not appear in active daily schedule
+      if (task.isArchived || task.isInbox) return false;
 
       const startDate = parseISO(task.date);
       if (!isValid(startDate)) return false;
@@ -210,7 +216,11 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       subtasks: task.subtasks,
       focusedSeconds: task.focusedSeconds,
       isPinned: task.isPinned,
+      isEvening: task.isEvening,
+      isGhost: task.isGhost,
+      isInbox: task.isInbox,
       estimatedMinutes: task.estimatedMinutes,
+      isArchived: task.isArchived,
     }));
 
     return mapped.sort((a, b) => {
@@ -269,6 +279,56 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
       return t;
     }));
   }, []);
+
+  const toggleEveningTask = useCallback((taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, isEvening: !t.isEvening };
+      }
+      return t;
+    }));
+  }, []);
+
+  const toggleGhostTask = useCallback((taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, isGhost: !t.isGhost };
+      }
+      return t;
+    }));
+  }, []);
+
+  const moveToInbox = useCallback((taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, isInbox: true };
+      }
+      return t;
+    }));
+  }, []);
+
+  const triageTask = useCallback((taskId: string, decision: 'today' | 'someday' | 'delete', targetDateStr?: string) => {
+    if (decision === 'delete') {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      return;
+    }
+    const dateToSet = targetDateStr || format(new Date(), 'yyyy-MM-dd');
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        if (decision === 'today') {
+          return { ...t, isInbox: false, date: dateToSet };
+        }
+        if (decision === 'someday') {
+          return { ...t, isInbox: true };
+        }
+      }
+      return t;
+    }));
+  }, []);
+
+  const getInboxTasks = useCallback((): Task[] => {
+    return tasks.filter(t => !t.isArchived && t.isInbox);
+  }, [tasks]);
 
   const deferTaskToTomorrow = useCallback((taskId: string, currentDateStr: string) => {
     const targetDate = parseISO(currentDateStr);
@@ -490,6 +550,11 @@ export function useTasks(storage: ITaskStorage = defaultTaskStorage) {
     importTasks,
     editTask,
     togglePinTask,
+    toggleEveningTask,
+    toggleGhostTask,
+    moveToInbox,
+    triageTask,
+    getInboxTasks,
     deferTaskToTomorrow,
     duplicateTask,
     toggleSubtask,

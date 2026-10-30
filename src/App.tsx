@@ -25,6 +25,8 @@ import { ZenBreathingModal } from './components/ZenBreathingModal';
 import { EveningReviewModal } from './components/EveningReviewModal';
 import { ZenMilestonesModal } from './components/ZenMilestonesModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { ZenTriageModal } from './components/ZenTriageModal';
+import { generateICSContent, generateMarkdownContent, downloadTextFile } from './utils/zenExport';
 
 interface AppToast {
   type?: 'success' | 'info' | 'error' | 'undo';
@@ -97,6 +99,11 @@ function App() {
     unarchiveTask,
     getArchivedTasks,
     togglePinTask,
+    toggleEveningTask,
+    toggleGhostTask,
+    moveToInbox,
+    triageTask,
+    getInboxTasks,
     deferTaskToTomorrow,
     duplicateTask,
   } = useTasks();
@@ -106,6 +113,35 @@ function App() {
   const [isEveningReviewOpen, setIsEveningReviewOpen] = useState(false);
   const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isTriageOpen, setIsTriageOpen] = useState(false);
+
+  const inboxTasks = useMemo(() => {
+    return tasks.filter(t => t.isInbox && !t.isArchived);
+  }, [tasks]);
+
+  const inboxCount = inboxTasks.length;
+
+  const handleExportICS = useCallback(() => {
+    const icsData = generateICSContent(tasks);
+    downloadTextFile('zen-tasks.ics', icsData, 'text/calendar;charset=utf-8');
+    showToast({
+      type: 'success',
+      title: 'iCalendar Exported 📅',
+      message: 'zen-tasks.ics downloaded. You can import it into Apple or Google Calendar.',
+      duration: 3500,
+    });
+  }, [tasks, showToast]);
+
+  const handleExportMarkdown = useCallback(() => {
+    const mdData = generateMarkdownContent(tasks);
+    downloadTextFile('zen-tasks.md', mdData, 'text/markdown;charset=utf-8');
+    showToast({
+      type: 'success',
+      title: 'Obsidian Exported 📝',
+      message: 'zen-tasks.md downloaded. Perfect for Obsidian Daily Notes.',
+      duration: 3500,
+    });
+  }, [tasks, showToast]);
 
   const { stats: focusStats, recordSession: recordFocusSession } = useFocusStats();
 
@@ -632,6 +668,10 @@ function App() {
             onOpenReview={() => setIsEveningReviewOpen(true)}
             onOpenMilestones={() => setIsMilestonesOpen(true)}
             onOpenShortcuts={() => setIsShortcutsOpen(true)}
+            onOpenTriage={() => setIsTriageOpen(true)}
+            inboxCount={inboxCount}
+            onExportICS={handleExportICS}
+            onExportMarkdown={handleExportMarkdown}
             isEvening={currentHour >= 20}
           />
         </div>
@@ -768,6 +808,11 @@ function App() {
                 onDeleteTaskFuture={handleDeleteTaskFuture}
                 onEditTask={editTask}
                 onTogglePin={togglePinTask}
+                onToggleEvening={toggleEveningTask}
+                onToggleGhost={toggleGhostTask}
+                onMoveToInbox={moveToInbox}
+                onOpenTriage={() => setIsTriageOpen(true)}
+                inboxCount={inboxCount}
                 onDeferTask={(taskId, dStr) => {
                   deferTaskToTomorrow(taskId, dStr);
                   showToast({
@@ -1146,6 +1191,20 @@ function App() {
         tasks={tasks}
         currentStreak={currentStreak}
         totalFocusSeconds={focusStats.totalFocusSeconds}
+      />
+
+      {/* Sunsama Inbox & Triage Modal */}
+      <ZenTriageModal
+        isOpen={isTriageOpen}
+        onClose={() => setIsTriageOpen(false)}
+        inboxTasks={inboxTasks}
+        onTriageDecision={triageTask}
+        onQuickAddTask={(title) => {
+          addTask({
+            title,
+            isInbox: true,
+          });
+        }}
       />
 
       {/* Keyboard Shortcuts Cheatsheet Modal */}

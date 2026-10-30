@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, Cloud, Moon, Award, HelpCircle, ChevronRight, Sparkles } from 'lucide-react';
+import { MoreHorizontal, Cloud, Moon, Award, HelpCircle, ChevronRight, Sparkles, Inbox, Calendar, FileText } from 'lucide-react';
 import { hapticLight } from '../utils/haptics';
 
 interface ZenMoreMenuProps {
@@ -7,6 +7,10 @@ interface ZenMoreMenuProps {
   onOpenReview: () => void;
   onOpenMilestones: () => void;
   onOpenShortcuts: () => void;
+  onOpenTriage?: () => void;
+  inboxCount?: number;
+  onExportICS?: () => void;
+  onExportMarkdown?: () => void;
   isEvening: boolean;
 }
 
@@ -15,6 +19,10 @@ export function ZenMoreMenu({
   onOpenReview,
   onOpenMilestones,
   onOpenShortcuts,
+  onOpenTriage,
+  inboxCount,
+  onExportICS,
+  onExportMarkdown,
   isEvening,
 }: ZenMoreMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -83,6 +91,32 @@ export function ZenMoreMenu({
           </div>
 
           <div className="space-y-1">
+            {/* Sunsama Inbox & Triage */}
+            {onOpenTriage && (
+              <button
+                type="button"
+                onClick={() => handleAction(onOpenTriage)}
+                className="w-full flex items-center justify-between p-2.5 rounded-2xl text-left hover:bg-emerald-50/70 transition-all text-xs group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Inbox size={15} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-800">Inbox & Triage</span>
+                    <p className="text-[10px] text-gray-400">Process unscheduled thoughts</p>
+                  </div>
+                </div>
+                {inboxCount && inboxCount > 0 ? (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    {inboxCount}
+                  </span>
+                ) : (
+                  <ChevronRight size={13} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                )}
+              </button>
+            )}
+
             {/* Evening Wind-Down */}
             <button
               type="button"
@@ -156,6 +190,46 @@ export function ZenMoreMenu({
                 ?
               </span>
             </button>
+
+            {/* Export iCalendar (.ics) */}
+            {onExportICS && (
+              <button
+                type="button"
+                onClick={() => handleAction(onExportICS)}
+                className="w-full flex items-center justify-between p-2.5 rounded-2xl text-left hover:bg-sky-50/70 transition-all text-xs group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <Calendar size={15} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-800">Export .ics</span>
+                    <p className="text-[10px] text-gray-400">Apple & Google Calendar</p>
+                  </div>
+                </div>
+                <ChevronRight size={13} className="text-gray-300 group-hover:text-sky-500 transition-colors" />
+              </button>
+            )}
+
+            {/* Export Obsidian Markdown (.md) */}
+            {onExportMarkdown && (
+              <button
+                type="button"
+                onClick={() => handleAction(onExportMarkdown)}
+                className="w-full flex items-center justify-between p-2.5 rounded-2xl text-left hover:bg-purple-50/70 transition-all text-xs group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <FileText size={15} />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-800">Export Obsidian .md</span>
+                    <p className="text-[10px] text-gray-400">Daily notes & tasks</p>
+                  </div>
+                </div>
+                <ChevronRight size={13} className="text-gray-300 group-hover:text-purple-500 transition-colors" />
+              </button>
+            )}
           </div>
 
           {/* Footer quote */}

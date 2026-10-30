@@ -14,39 +14,54 @@ interface ShortcutItem {
 
 const SHORTCUT_LIST: ShortcutItem[] = [
   {
+    keyDisplay: ['J', 'K'],
+    action: 'Vim Gezinme',
+    description: 'Görevler arasında aşağı (J) ve yukarı (K) fareye dokunmadan ak',
+  },
+  {
+    keyDisplay: ['E'],
+    action: 'Görevi Tamamla',
+    description: 'Seçili görevi anında 0. milisaniyede tamamla / geri al',
+  },
+  {
+    keyDisplay: ['M'],
+    action: 'Bu Akşam (Things 3)',
+    description: 'Seçili görevi mesai sonrasına / Bu Akşam bölümüne taşı',
+  },
+  {
+    keyDisplay: ['G'],
+    action: 'Hayalet Blok (Amie)',
+    description: 'Seçili görevi yarı saydam "vaktim kalırsa" hayalet bloğuna dönüştür',
+  },
+  {
+    keyDisplay: ['1', '2', '3'],
+    action: 'Hızlı Süre',
+    description: 'Seçili göreve tek tuşla 15 dk (1), 30 dk (2) veya 60 dk (3) planla',
+  },
+  {
     keyDisplay: ['N'],
-    action: 'New Task',
-    description: 'Jump instantly to the task creation input',
-  },
-  {
-    keyDisplay: ['F'],
-    action: 'Focus Screen',
-    description: 'Switch instantly between the Focus timer tab and Tasks',
-  },
-  {
-    keyDisplay: ['Z'],
-    action: 'Zen View',
-    description: 'Toggle distraction-free view',
+    action: 'Yeni Görev',
+    description: 'Doğrudan yeni görev giriş kutusuna odaklan',
   },
   {
     keyDisplay: ['T'],
-    action: 'Go to Today',
-    description: "Snap calendar back to today's date",
+    action: 'Bugüne Git / Taşı',
+    description: "Takvimi bugüne getir veya seçili görevi bugüne taşı",
   },
   {
     keyDisplay: ['Space'],
-    action: 'Timer Toggle',
-    description: 'Pause or resume the active Zen focus countdown',
+    action: 'Sayaç Başlat / Durdur',
+    description: 'Aktif Zen odaklanma sayacını duraklat veya sürdür',
   },
   {
     keyDisplay: ['?'],
-    action: 'Shortcuts Guide',
-    description: 'Open or close this quick keyboard cheatsheet',
+    action: 'Kısayollar Kılavuzu',
+    description: 'Bu hızlı klavye rehberini aç veya kapat',
   },
   {
     keyDisplay: ['Esc'],
-    action: 'Escape / Cancel',
-    description: 'Dismiss open dialogs, cancel task creation, or exit Zen view',
+    action: 'Çıkış / İptal',
+    description: 'Pencereleri kapat, seçimi sıfırla veya odak modundan çık',
   },
 ];
 

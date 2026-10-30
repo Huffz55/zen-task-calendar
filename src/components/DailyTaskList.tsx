@@ -26,6 +26,9 @@ import {
   Copy,
   Link2,
   MoreHorizontal,
+  Moon,
+  Ghost,
+  Inbox,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop, playBambooTap, playWaterDrop, playSoftSwoosh, triggerSakuraPetals } from '../utils/audio';
@@ -76,13 +79,28 @@ interface DailyTaskListProps {
     tag?: TaskTag,
     subtasks?: Subtask[],
     estimatedMinutes?: number,
-    isPinned?: boolean
+    isPinned?: boolean,
+    isEvening?: boolean,
+    isGhost?: boolean,
+    isInbox?: boolean
   ) => void;
   onDeleteTask: (taskId: string) => void;
   onDeleteTaskInstance?: (taskId: string, dateStr: string) => void;
   onDeleteTaskFuture?: (taskId: string, dateStr: string) => void;
-  onEditTask: (taskId: string, newTitle: string) => void;
+  onEditTask: (
+    taskId: string,
+    newTitle: string,
+    newTag?: TaskTag,
+    subtasks?: Subtask[],
+    estimatedMinutes?: number,
+    isPinned?: boolean
+  ) => void;
   onTogglePin?: (taskId: string) => void;
+  onToggleEvening?: (taskId: string) => void;
+  onToggleGhost?: (taskId: string) => void;
+  onMoveToInbox?: (taskId: string) => void;
+  onOpenTriage?: () => void;
+  inboxCount?: number;
   onDeferTask?: (taskId: string, dateStr: string) => void;
   onDuplicateTask?: (taskId: string, dateStr: string) => void;
   onReorderTasks: (draggedId: string, targetId: string) => void;
@@ -117,6 +135,11 @@ function DailyTaskListComponent({
   onDeleteTaskFuture,
   onEditTask,
   onTogglePin,
+  onToggleEvening,
+  onToggleGhost,
+  onMoveToInbox,
+  onOpenTriage,
+  inboxCount = 0,
   onDeferTask,
   onDuplicateTask,
   onReorderTasks,
@@ -155,6 +178,9 @@ function DailyTaskListComponent({
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
   const [expandedTaskIds, setExpandedTaskIds] = useState<Record<string, boolean>>({});
   const [inlineSubtaskInputs, setInlineSubtaskInputs] = useState<Record<string, string>>({});
+  const [newIsEvening, setNewIsEvening] = useState(false);
+  const [newIsGhost, setNewIsGhost] = useState(false);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const isViewingToday = dateStr === todayStr;
@@ -192,9 +218,14 @@ function DailyTaskListComponent({
     : null;
 
   const availableTags = Array.from(new Set(tasks.map(t => t.tag).filter(Boolean))) as TaskTag[];
-  const displayedTasks = activeTagFilter === 'all' 
+  const filteredTasks = activeTagFilter === 'all' 
     ? tasks 
     : tasks.filter(t => t.tag === activeTagFilter);
+
+  const displayedTasks = [
+    ...filteredTasks.filter(t => !t.isEvening),
+    ...filteredTasks.filter(t => t.isEvening),
+  ];
 
   // Global 'N' Hotkey for Add Task & 'Escape' to dismiss
   useEffect(() => {
@@ -230,6 +261,73 @@ function DailyTaskListComponent({
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [taskToDelete, editingTaskId, isAdding]);
 
+  // Linear / Superhuman Keyboard Vim Flow (J, K, E, T, M, G, 1-3, Delete)
+  useEffect(() => {
+    const handleVimNavigation = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (displayedTasks.length === 0) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedTaskId(prevId => {
+          if (!prevId) return displayedTasks[0]?.taskId || null;
+          const idx = displayedTasks.findIndex(t => t.taskId === prevId);
+          if (idx === -1 || idx >= displayedTasks.length - 1) return displayedTasks[0]?.taskId || null;
+          return displayedTasks[idx + 1]?.taskId || null;
+        });
+      } else if (key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedTaskId(prevId => {
+          if (!prevId) return displayedTasks[displayedTasks.length - 1]?.taskId || null;
+          const idx = displayedTasks.findIndex(t => t.taskId === prevId);
+          if (idx <= 0) return displayedTasks[displayedTasks.length - 1]?.taskId || null;
+          return displayedTasks[idx - 1]?.taskId || null;
+        });
+      } else if (focusedTaskId) {
+        const activeTask = displayedTasks.find(t => t.taskId === focusedTaskId);
+        if (!activeTask) return;
+
+        if (key === 'e' || key === 'x') {
+          e.preventDefault();
+          handleToggle(activeTask.taskId, dateStr, activeTask.isCompleted);
+        } else if (key === 't' && onDeferTask) {
+          e.preventDefault();
+          onDeferTask(activeTask.taskId, dateStr);
+        } else if (key === 'm' && onToggleEvening) {
+          e.preventDefault();
+          onToggleEvening(activeTask.taskId);
+        } else if (key === 'g' && onToggleGhost) {
+          e.preventDefault();
+          onToggleGhost(activeTask.taskId);
+        } else if (key === '1' && onEditTask) {
+          e.preventDefault();
+          onEditTask(activeTask.taskId, activeTask.title, activeTask.tag, activeTask.subtasks, 15, activeTask.isPinned);
+        } else if (key === '2' && onEditTask) {
+          e.preventDefault();
+          onEditTask(activeTask.taskId, activeTask.title, activeTask.tag, activeTask.subtasks, 30, activeTask.isPinned);
+        } else if (key === '3' && onEditTask) {
+          e.preventDefault();
+          onEditTask(activeTask.taskId, activeTask.title, activeTask.tag, activeTask.subtasks, 60, activeTask.isPinned);
+        } else if ((e.key === 'Delete' || e.key === 'Backspace') && onDeleteTask) {
+          e.preventDefault();
+          onDeleteTask(activeTask.taskId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleVimNavigation);
+    return () => window.removeEventListener('keydown', handleVimNavigation);
+  }, [displayedTasks, focusedTaskId, dateStr, onDeferTask, onToggleEvening, onToggleGhost, onEditTask, onDeleteTask]);
+
   const submitTask = () => {
     const raw = newTaskTitle.trim();
     if (!raw) return;
@@ -256,7 +354,17 @@ function DailyTaskListComponent({
         : undefined;
 
     playWaterDrop();
-    onAddTask(finalTitle || raw, dateStr, recurrence, finalTag, subtaskObjects, newEstimatedMinutes, newIsPinned);
+    onAddTask(
+      finalTitle || raw,
+      dateStr,
+      recurrence,
+      finalTag,
+      subtaskObjects,
+      newEstimatedMinutes,
+      newIsPinned,
+      newIsEvening,
+      newIsGhost
+    );
     setNewTaskTitle('');
     setSelectedTag(undefined);
     setRecurrence('none');
@@ -264,6 +372,8 @@ function DailyTaskListComponent({
     setNewSubtaskInput('');
     setNewEstimatedMinutes(undefined);
     setNewIsPinned(false);
+    setNewIsEvening(false);
+    setNewIsGhost(false);
     setActiveAddDrawer(null);
     setIsAdding(false);
   };
@@ -455,6 +565,23 @@ function DailyTaskListComponent({
             </div>
             
             <div className="flex items-center gap-2 shrink-0">
+              {onOpenTriage && (
+                <button
+                  type="button"
+                  onClick={onOpenTriage}
+                  className="px-2.5 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
+                  title="Görev Karantinası / Sunsama Triage Ritüeli"
+                >
+                  <Inbox size={14} />
+                  <span className="hidden sm:inline">Triage</span>
+                  {inboxCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+                      {inboxCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
               <AmbientSoundControl align="right" dropDirection="down" />
               
               {onToggleZenMode && (
@@ -599,16 +726,32 @@ function DailyTaskListComponent({
           )
         ) : (
           <ul className="space-y-3">
-            {displayedTasks.map(task => {
+            {displayedTasks.map((task, idx) => {
               const subtasks = task.subtasks || [];
               const completedSubtasks = subtasks.filter(s => s.isCompleted).length;
               const subtaskPercent = subtasks.length > 0 ? (completedSubtasks / subtasks.length) * 100 : 0;
               const isExpanded = !!expandedTaskIds[task.taskId];
               const inlineInput = inlineSubtaskInputs[task.taskId] || '';
+              const isFirstEvening = task.isEvening && (idx === 0 || !displayedTasks[idx - 1].isEvening);
 
               return (
-                <li 
-                  key={task.id} 
+                <React.Fragment key={task.id}>
+                  {isFirstEvening && (
+                    <li key="evening-divider" className="pt-3 pb-1 border-t border-dashed border-indigo-200/80 list-none">
+                      <div className="flex items-center justify-between px-1 text-xs font-semibold text-indigo-700 tracking-wide">
+                        <div className="flex items-center gap-1.5">
+                          <Moon size={14} className="text-indigo-500 fill-indigo-100" />
+                          <span>Bu Akşam</span>
+                          <span className="text-[10px] font-normal text-indigo-500 opacity-80">(This Evening)</span>
+                        </div>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100/80">
+                          18:00 sonrası odaklan
+                        </span>
+                      </div>
+                    </li>
+                  )}
+                  <li 
+                    key={task.id} 
                   draggable
                   onDragStart={(e) => {
                     handleDragStart(e, task.taskId);
@@ -617,13 +760,15 @@ function DailyTaskListComponent({
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, task.taskId)}
                   onDragEnd={() => setDraggedTaskId(null)}
-                  className={`group flex flex-col p-3 md:p-4 rounded-2xl border transition-colors animate-slide-up-fade cursor-grab active:cursor-grabbing ${
+                  className={`group flex flex-col p-3 md:p-4 rounded-2xl border transition-all animate-slide-up-fade cursor-grab active:cursor-grabbing ${
                     draggedTaskId === task.taskId
                       ? 'opacity-50 border-dashed border-pink-200'
+                      : task.isGhost
+                      ? 'border-dashed border-indigo-200 bg-indigo-50/20 opacity-75 hover:opacity-100 hover:bg-indigo-50/40'
                       : task.isPinned && !task.isCompleted
                       ? 'border-amber-300 bg-amber-50/20 hover:bg-amber-50/40 shadow-xs'
                       : 'border-pink-50 hover:bg-pink-50/50'
-                  }`}
+                  } ${focusedTaskId === task.taskId ? 'ring-2 ring-emerald-500/80 shadow-md scale-[1.01]' : ''}`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2 md:gap-4 flex-1 overflow-hidden">
@@ -665,6 +810,29 @@ function DailyTaskListComponent({
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300 bg-amber-100/70 text-amber-700 shrink-0">
                               <Star size={10} className="fill-amber-500 text-amber-500" />
                               <span>Focus of the Day</span>
+                            </span>
+                          )}
+
+                          {/* Ghost Badge */}
+                          {task.isGhost && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50/90 text-indigo-600 shrink-0" title="Hayalet Blok (Amie/Cron) - Vaktim kalırsa">
+                              <span>👻</span>
+                              <span>Hayalet</span>
+                            </span>
+                          )}
+
+                          {/* Evening Badge */}
+                          {task.isEvening && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50/90 text-purple-600 shrink-0" title="Bu Akşam (Things 3)">
+                              <span>🌙</span>
+                              <span>Bu Akşam</span>
+                            </span>
+                          )}
+
+                          {/* Keyboard Vim Active Indicator */}
+                          {focusedTaskId === task.taskId && (
+                            <span className="inline-flex items-center text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200/80 shrink-0">
+                              Vim [J/K/E/M/G]
                             </span>
                           )}
 
@@ -799,6 +967,51 @@ function DailyTaskListComponent({
                                   >
                                     <Star size={13} className={task.isPinned ? "fill-amber-500 text-amber-500" : "text-gray-400"} />
                                     <span>{task.isPinned ? 'Unpin Focus Goal' : 'Set as Focus of the Day'}</span>
+                                  </button>
+                                )}
+
+                                {onToggleEvening && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      hapticLight();
+                                      onToggleEvening(task.taskId);
+                                      setOpenMenuTaskId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-purple-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                  >
+                                    <Moon size={13} className={task.isEvening ? "fill-purple-500 text-purple-500" : "text-gray-400"} />
+                                    <span>{task.isEvening ? 'Gündüze Al' : 'Bu Akşam (Things 3)'}</span>
+                                  </button>
+                                )}
+
+                                {onToggleGhost && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      hapticLight();
+                                      onToggleGhost(task.taskId);
+                                      setOpenMenuTaskId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-indigo-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                  >
+                                    <Ghost size={13} className={task.isGhost ? "text-indigo-500" : "text-gray-400"} />
+                                    <span>{task.isGhost ? 'Katı Bloğa Çevir' : 'Hayalet Blok (Amie)'}</span>
+                                  </button>
+                                )}
+
+                                {onMoveToInbox && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      hapticLight();
+                                      onMoveToInbox(task.taskId);
+                                      setOpenMenuTaskId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                  >
+                                    <Inbox size={13} className="text-gray-400" />
+                                    <span>Karantina Havuzuna At (Sunsama)</span>
                                   </button>
                                 )}
 
@@ -984,9 +1197,10 @@ function DailyTaskListComponent({
                     </div>
                   )}
                 </li>
-              );
-            })}
-          </ul>
+              </React.Fragment>
+            );
+          })}
+        </ul>
         )}
       </div>
 
@@ -1034,6 +1248,20 @@ function DailyTaskListComponent({
                     <Star size={10} className="fill-amber-500 text-amber-500" />
                     <span>Focus Goal</span>
                     <button type="button" onClick={() => setNewIsPinned(false)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
+                  </span>
+                )}
+                {newIsEvening && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700">
+                    <Moon size={10} className="fill-purple-500 text-purple-500" />
+                    <span>Bu Akşam</span>
+                    <button type="button" onClick={() => setNewIsEvening(false)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
+                  </span>
+                )}
+                {newIsGhost && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700">
+                    <Ghost size={10} className="text-indigo-600" />
+                    <span>Hayalet Blok</span>
+                    <button type="button" onClick={() => setNewIsGhost(false)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
                   </span>
                 )}
                 {recurrence !== 'none' && (
@@ -1270,6 +1498,40 @@ function DailyTaskListComponent({
                 >
                   <span>🔁</span>
                   <span className="text-[11px] hidden sm:inline">{recurrence !== 'none' ? recurrence : 'Repeat'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setNewIsEvening(prev => !prev);
+                  }}
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                    newIsEvening
+                      ? 'bg-purple-100 text-purple-700 font-semibold'
+                      : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                  }`}
+                  title="Things 3: Bu Akşam"
+                >
+                  <Moon size={12} className={newIsEvening ? "fill-purple-500 text-purple-500" : ""} />
+                  <span className="text-[11px] hidden sm:inline">Bu Akşam</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setNewIsGhost(prev => !prev);
+                  }}
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                    newIsGhost
+                      ? 'bg-indigo-100 text-indigo-700 font-semibold'
+                      : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
+                  }`}
+                  title="Amie/Cron: Hayalet Blok (Vaktim kalırsa)"
+                >
+                  <Ghost size={12} className={newIsGhost ? "text-indigo-600" : ""} />
+                  <span className="text-[11px] hidden sm:inline">Hayalet</span>
                 </button>
               </div>
 
