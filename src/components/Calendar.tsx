@@ -106,9 +106,9 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
             className={`
               relative flex flex-col items-center justify-center p-1 md:p-1.5 min-h-[40px] md:min-h-[48px] text-sm cursor-pointer
               border transition-all duration-200 rounded-2xl flex-1 shrink-0
-              ${!isCurrentMonth ? 'text-gray-400/50 opacity-35 select-none hover:opacity-75' : 'text-gray-700 font-medium'}
-              ${isSelected ? 'bg-pink-100 text-pink-700 font-bold shadow-sm ring-2 ring-pink-400/60 border-pink-300/50' : 'hover:bg-pink-50 border-transparent'}
-              ${isTodayDate && !isSelected ? 'border-pink-300/60 text-pink-500 font-semibold' : ''}
+              ${!isCurrentMonth ? 'text-gray-400 select-none hover:text-gray-600 transition-colors' : 'text-gray-700 font-medium'}
+              ${isSelected ? 'bg-pink-100 text-pink-700 font-bold shadow-xs ring-1 ring-pink-400 border border-pink-300' : 'hover:bg-pink-50 border-transparent'}
+              ${isTodayDate && !isSelected ? 'border border-pink-300 text-pink-600 font-semibold' : ''}
               ${isHovered ? '!bg-pink-50/80 !border-pink-200 scale-105 z-10' : ''}
             `}
           >
@@ -133,7 +133,7 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
   };
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col overflow-visible">
+    <div className="bg-white p-4 md:p-6 rounded-3xl border border-pink-100/70 shadow-[0_4px_25px_-5px_rgba(236,72,153,0.06),0_1px_3px_rgba(0,0,0,0.03)] h-full flex flex-col overflow-visible">
       {renderHeader()}
       {renderDays()}
       {renderCells()}

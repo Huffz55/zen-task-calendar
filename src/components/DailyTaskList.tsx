@@ -30,6 +30,8 @@ import {
   Ghost,
   Inbox,
   Sparkles,
+  Tag,
+  Repeat,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop, playBambooTap, playWaterDrop, playSoftSwoosh, triggerSakuraPetals } from '../utils/audio';
@@ -487,7 +489,7 @@ function DailyTaskListComponent({
   };
 
   return (
-    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden relative group/zen">
+    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-100/70 shadow-[0_4px_25px_-5px_rgba(236,72,153,0.06),0_1px_3px_rgba(0,0,0,0.03)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden relative group/zen">
       <div className="mb-4 md:mb-6 flex flex-col shrink-0">
         <div className="flex justify-between items-start w-full">
           <div>
@@ -622,7 +624,7 @@ function DailyTaskListComponent({
                 }}
                 className="px-3.5 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-semibold rounded-xl transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 hover:scale-105 active:scale-95"
               >
-                Move to Today 🌸
+                Move to Today
               </button>
               <button
                 type="button"
@@ -637,8 +639,8 @@ function DailyTaskListComponent({
 
         {isPerfectDay && tasks.length > 0 && (
           <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-pink-50/90 via-pink-100/40 to-pink-50/90 border border-pink-100/80 shadow-[0_4px_20px_rgba(244,114,182,0.06)] flex items-center gap-3.5 animate-slide-up-fade">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl shrink-0 select-none">
-              🌸
+            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-pink-500 shrink-0 select-none">
+              <Sparkles size={20} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -717,8 +719,10 @@ function DailyTaskListComponent({
             </div>
           ) : (
             <div className="flex-1 min-h-[100px] flex flex-col items-center justify-center text-center text-gray-400 py-6 animate-slide-up-fade">
-              <span className="text-2xl mb-2 select-none opacity-80">🌱</span>
-              <p className="text-xs text-pink-500 font-semibold">Creating your first goal for today</p>
+              <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-100/80 flex items-center justify-center text-pink-500 mb-2.5 shadow-2xs">
+                <Sparkles size={20} />
+              </div>
+              <p className="text-xs text-pink-600 font-semibold tracking-wide">Creating your first goal for today</p>
               <p className="text-[11px] text-gray-400 mt-0.5">Press Enter to save or Esc to cancel</p>
             </div>
           )
@@ -1230,7 +1234,8 @@ function DailyTaskListComponent({
                 )}
                 {newEstimatedMinutes && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border border-pink-200 bg-pink-50 text-pink-700">
-                    <span>⏱️ {newEstimatedMinutes >= 60 ? `${Math.floor(newEstimatedMinutes / 60)}h ${newEstimatedMinutes % 60 ? `${newEstimatedMinutes % 60}m` : ''}`.trim() : `${newEstimatedMinutes}m`}</span>
+                    <Timer size={10} className="text-pink-500" />
+                    <span>{newEstimatedMinutes >= 60 ? `${Math.floor(newEstimatedMinutes / 60)}h ${newEstimatedMinutes % 60 ? `${newEstimatedMinutes % 60}m` : ''}`.trim() : `${newEstimatedMinutes}m`}</span>
                     <button type="button" onClick={() => setNewEstimatedMinutes(undefined)} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
                   </span>
                 )}
@@ -1243,7 +1248,8 @@ function DailyTaskListComponent({
                 )}
                 {recurrence !== 'none' && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border border-pink-200 bg-white text-gray-600">
-                    <span>🔁 {recurrence === 'daily' ? 'Daily' : recurrence === 'weekly' ? 'Weekly' : 'Bi-weekly'}</span>
+                    <Repeat size={10} className="text-pink-500" />
+                    <span>{recurrence === 'daily' ? 'Daily' : recurrence === 'weekly' ? 'Weekly' : 'Bi-weekly'}</span>
                     <button type="button" onClick={() => setRecurrence('none')} className="hover:opacity-70 ml-0.5 cursor-pointer"><X size={10} /></button>
                   </span>
                 )}
@@ -1407,42 +1413,42 @@ function DailyTaskListComponent({
                 <button
                   type="button"
                   onClick={() => setActiveAddDrawer(prev => prev === 'tag' ? null : 'tag')}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
                     activeAddDrawer === 'tag' || selectedTag
                       ? 'bg-pink-100 text-pink-600 font-semibold'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-pink-50'
                   }`}
                   title="Tag category"
                 >
-                  <span>🏷️</span>
+                  <Tag size={12} className={activeAddDrawer === 'tag' || selectedTag ? 'text-pink-600' : 'text-gray-400'} />
                   <span className="text-[11px] hidden sm:inline">{selectedTag ? TAG_CONFIG[selectedTag].label : 'Tag'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveAddDrawer(prev => prev === 'time' ? null : 'time')}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
                     activeAddDrawer === 'time' || newEstimatedMinutes
                       ? 'bg-pink-100 text-pink-600 font-semibold'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-pink-50'
                   }`}
                   title="Estimated duration"
                 >
-                  <span>⏱️</span>
+                  <Timer size={12} className={activeAddDrawer === 'time' || newEstimatedMinutes ? 'text-pink-600' : 'text-gray-400'} />
                   <span className="text-[11px] hidden sm:inline">{newEstimatedMinutes ? `${newEstimatedMinutes}m` : 'Time'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveAddDrawer(prev => prev === 'checklist' ? null : 'checklist')}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
                     activeAddDrawer === 'checklist' || newSubtasks.length > 0
                       ? 'bg-pink-100 text-pink-600 font-semibold'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-pink-50'
                   }`}
                   title="Add subtask steps"
                 >
-                  <ListTodo size={13} />
+                  <ListTodo size={12} />
                   <span className="text-[11px] hidden sm:inline">Steps{newSubtasks.length > 0 ? ` (${newSubtasks.length})` : ''}</span>
                 </button>
 
@@ -1452,28 +1458,28 @@ function DailyTaskListComponent({
                     hapticLight();
                     setNewIsPinned(!newIsPinned);
                   }}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
                     newIsPinned
                       ? 'bg-amber-100 text-amber-700 font-semibold'
                       : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
                   }`}
                   title="Set as Focus of the Day"
                 >
-                  <Star size={13} className={newIsPinned ? 'fill-amber-500 text-amber-500' : ''} />
+                  <Star size={12} className={newIsPinned ? 'fill-amber-500 text-amber-500' : ''} />
                   <span className="text-[11px] hidden sm:inline">Priority</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveAddDrawer(prev => prev === 'repeat' ? null : 'repeat')}
-                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
                     activeAddDrawer === 'repeat' || recurrence !== 'none'
                       ? 'bg-pink-100 text-pink-600 font-semibold'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-pink-50'
                   }`}
                   title="Recurrence"
                 >
-                  <span>🔁</span>
+                  <Repeat size={12} className={activeAddDrawer === 'repeat' || recurrence !== 'none' ? 'text-pink-600' : 'text-gray-400'} />
                   <span className="text-[11px] hidden sm:inline">{recurrence !== 'none' ? recurrence : 'Repeat'}</span>
                 </button>
               </div>

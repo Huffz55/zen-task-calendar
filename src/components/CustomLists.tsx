@@ -83,7 +83,7 @@ function CustomListsComponent({
   // If no lists exist at all, render an inviting Zen empty state
   if (lists.length === 0) {
     return (
-      <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-pink-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col items-center justify-center p-6 sm:p-12 animate-slide-up-fade relative overflow-hidden">
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-pink-100/70 shadow-[0_4px_25px_-5px_rgba(236,72,153,0.06),0_1px_3px_rgba(0,0,0,0.03)] h-full flex flex-col items-center justify-center p-6 sm:p-12 animate-slide-up-fade relative overflow-hidden">
         <div className="w-16 h-16 rounded-3xl bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-500 mb-4 shadow-xs">
           <ListChecks size={30} />
         </div>
@@ -120,7 +120,7 @@ function CustomListsComponent({
   const percentDone = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   return (
-    <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-pink-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col md:flex-row overflow-hidden animate-slide-up-fade relative">
+    <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-pink-100/70 shadow-[0_4px_25px_-5px_rgba(236,72,153,0.06),0_1px_3px_rgba(0,0,0,0.03)] h-full flex flex-col md:flex-row overflow-hidden animate-slide-up-fade relative">
       
       {/* ── Left Sidebar: Lists Overview (Hidden on mobile if viewing details) ── */}
       <div className={`w-full md:w-72 lg:w-80 border-b md:border-b-0 md:border-r border-pink-100/70 p-4 md:p-5 flex flex-col shrink-0 bg-pink-50/20 ${selectedListId ? 'hidden md:flex' : 'flex'}`}>
@@ -134,22 +134,22 @@ function CustomListsComponent({
         </div>
 
         {/* Quick Add List Form in Sidebar */}
-        <form onSubmit={handleAddList} className="flex items-center gap-1.5 mb-3">
+        <form onSubmit={handleAddList} className="relative mb-3">
           <input
             type="text"
             value={newListTitle}
             onChange={(e) => setNewListTitle(e.target.value)}
-            placeholder="+ New checklist..."
+            placeholder="New checklist..."
             maxLength={60}
-            className="flex-1 bg-white border border-pink-100 px-3 py-1.5 text-xs rounded-xl text-gray-700 placeholder-gray-400 outline-none focus:border-pink-300 focus:ring-1 focus:ring-pink-200 transition-all shadow-2xs"
+            className="w-full bg-white border border-pink-100 pl-3 pr-8 py-2 text-xs rounded-xl text-gray-700 placeholder-gray-400 outline-none focus:border-pink-300 focus:ring-1 focus:ring-pink-200 transition-all shadow-2xs"
           />
           <button
             type="submit"
             disabled={!newListTitle.trim()}
-            className="p-1.5 bg-pink-100 hover:bg-pink-200 disabled:opacity-40 text-pink-600 rounded-xl transition-colors cursor-pointer"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-pink-100 hover:bg-pink-200 disabled:opacity-30 text-pink-600 flex items-center justify-center transition-all cursor-pointer"
             title="Create list"
           >
-            <Plus size={16} />
+            <Plus size={14} />
           </button>
         </form>
 
@@ -256,8 +256,10 @@ function CustomListsComponent({
           <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
             {activeList.items.length === 0 ? (
               <div className="h-48 flex flex-col items-center justify-center text-center text-gray-400">
-                <span className="text-2xl mb-1.5">📝</span>
-                <p className="text-xs font-medium">List is empty</p>
+                <div className="w-10 h-10 rounded-2xl bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-400 mb-2 shadow-2xs">
+                  <ListChecks size={20} />
+                </div>
+                <p className="text-xs font-semibold text-gray-600">List is empty</p>
                 <p className="text-[11px] text-gray-400">Type an item above and press Add</p>
               </div>
             ) : (
@@ -272,7 +274,7 @@ function CustomListsComponent({
                   >
                     <button
                       type="button"
-                      className={`transition-all duration-200 flex items-center justify-center shrink-0 rounded-full ${
+                      className={`w-6 h-6 transition-all duration-200 flex items-center justify-center shrink-0 rounded-full ${
                         item.completed
                           ? 'text-pink-500 scale-105'
                           : 'text-gray-300 group-hover:text-pink-300'

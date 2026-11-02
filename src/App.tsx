@@ -558,10 +558,10 @@ function App() {
     if (currentTheme === 'midnight') return "bg-[#121019]";
     if (currentTheme === 'matcha') return "bg-[#f2f7f3]";
     if (currentTheme === 'nordic') return "bg-[#f1f6fa]";
-    if (currentHour >= 6 && currentHour < 12) return "bg-[#fffbf6]"; // Peach
-    if (currentHour >= 12 && currentHour < 17) return "bg-slate-50"; // Light Slate
-    if (currentHour >= 17 && currentHour < 20) return "bg-[#fff5f8]"; // Sunset Pink
-    return "bg-[#f9f7fb]"; // Lavender
+    if (currentHour >= 6 && currentHour < 12) return "bg-[#fbf8f6]"; // Calm Morning Warmth
+    if (currentHour >= 12 && currentHour < 17) return "bg-[#fbf9fa]"; // Afternoon Soft Blush
+    if (currentHour >= 17 && currentHour < 20) return "bg-[#faf6f8]"; // Sunset Soft Blush
+    return "bg-[#f8f6fa]"; // Evening Serenity
   };
 
   React.useEffect(() => {
@@ -733,7 +733,7 @@ function App() {
               ${isZenMode ? 'w-0 opacity-0 m-0 p-0 border-0 hidden lg:flex' : 'w-full lg:w-5/12'}
             `}
           >
-            <header className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex justify-between items-start shrink-0 min-w-[280px]">
+            <header className="bg-white p-5 md:p-6 rounded-3xl border border-pink-100/70 shadow-[0_4px_25px_-5px_rgba(236,72,153,0.06),0_1px_3px_rgba(0,0,0,0.03)] flex justify-between items-start shrink-0 min-w-[280px]">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-pink-300/70 text-sm font-medium tracking-wide italic">{getGreeting()}</p>
@@ -872,7 +872,7 @@ function App() {
         </div>
 
         {/* Focus Layout (Absolute Positioned for Smooth Transitions) */}
-        <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden pb-32 lg:pb-8
+        <div className={`absolute inset-0 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-y-auto overflow-x-hidden scrollbar-none pb-32 lg:pb-8
           ${activeTab === 'focus' ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-8 pointer-events-none invisible -z-10'}
         `}>
           <div className="w-full max-w-2xl h-auto flex flex-col gap-6 py-2 px-1">
@@ -897,7 +897,7 @@ function App() {
             )}
 
             {/* Zen Timer Big View with Breathing Glow Aura */}
-            <div className="relative z-30 bg-white/70 backdrop-blur-md border border-pink-100 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col items-center">
+            <div className="relative z-30 bg-white/90 backdrop-blur-md border border-pink-100/70 rounded-3xl p-6 md:p-8 shadow-[0_4px_25px_-5px_rgba(236,72,153,0.06),0_1px_3px_rgba(0,0,0,0.03)] flex flex-col items-center">
               {isTimerRunning && (
                 <div className="absolute w-80 h-80 rounded-full bg-pink-300/20 blur-3xl animate-pulse pointer-events-none" />
               )}
@@ -1023,11 +1023,11 @@ function App() {
             </div>
 
             {/* Mindful Breathing Break Trigger */}
-            <div className="flex justify-center -my-1">
+            <div className="flex justify-center my-2">
               <button
                 type="button"
                 onClick={() => setIsZenBreathingOpen(true)}
-                className="px-4 py-2 bg-white/70 hover:bg-pink-50 border border-pink-100/80 rounded-2xl text-xs font-semibold text-pink-600 transition-all shadow-xs flex items-center gap-2 hover:scale-102 active:scale-95 cursor-pointer"
+                className="px-4 py-2 bg-white/70 hover:bg-pink-50 border border-pink-100/80 rounded-2xl text-xs font-semibold text-pink-600 transition-all shadow-xs flex items-center gap-2 hover:scale-102 active:scale-95 cursor-pointer outline-none focus:outline-none"
               >
                 <Wind size={15} className="text-pink-400" />
                 <span>Box Breathing</span>
@@ -1039,7 +1039,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setShowAnalytics(prev => !prev)}
-                className="px-4 py-2 rounded-full bg-white/60 hover:bg-white text-gray-500 hover:text-pink-600 border border-pink-100 hover:border-pink-200 text-xs font-semibold transition-all duration-200 shadow-2xs flex items-center gap-2 cursor-pointer active:scale-95"
+                className="px-4 py-2 rounded-full bg-white/60 hover:bg-white text-gray-500 hover:text-pink-600 border border-pink-100 hover:border-pink-200 text-xs font-semibold transition-all duration-200 shadow-2xs flex items-center gap-2 cursor-pointer active:scale-95 outline-none focus:outline-none"
                 title="Toggle Focus Analytics"
               >
                 <BarChart2 size={14} className={showAnalytics ? "text-pink-500" : "text-gray-400"} />
