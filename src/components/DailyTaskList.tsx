@@ -29,6 +29,7 @@ import {
   Moon,
   Ghost,
   Inbox,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playSoftPop, playBambooTap, playWaterDrop, playSoftSwoosh, triggerSakuraPetals } from '../utils/audio';
@@ -498,7 +499,7 @@ function DailyTaskListComponent({
             </p>
           </div>
           
-          <div className="flex gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <div className={`flex items-center gap-3 ${isZenMode ? 'md:hidden' : ''}`}>
               <div className="relative w-11 h-11 flex items-center justify-center shrink-0">
                 <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
@@ -526,7 +527,7 @@ function DailyTaskListComponent({
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   {isPerfectDay ? (
-                    <span className="text-xs select-none animate-bounce" title="Perfect Day!">🌸</span>
+                    <Sparkles size={14} className="text-pink-500 animate-pulse" title="Perfect Day!" />
                   ) : (
                     <span className="text-[10px] font-bold text-gray-600">
                       {tasks.length > 0 ? `${Math.round(progressPercent)}%` : '0%'}
@@ -537,8 +538,9 @@ function DailyTaskListComponent({
 
               <div className="flex flex-col justify-center">
                 {isPerfectDay ? (
-                  <span className="text-xs font-semibold text-pink-500 bg-pink-50/90 px-2 py-0.5 rounded-full border border-pink-100 whitespace-nowrap">
-                    All Done! 🌸
+                  <span className="text-xs font-semibold text-pink-500 bg-pink-50/90 px-2.5 py-0.5 rounded-full border border-pink-100 whitespace-nowrap flex items-center gap-1">
+                    <Sparkles size={12} />
+                    <span>All Complete!</span>
                   </span>
                 ) : (
                   <>
@@ -695,18 +697,18 @@ function DailyTaskListComponent({
 
         {tasks.length === 0 ? (
           !isAdding ? (
-            <div className="h-full min-h-[180px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full p-6">
+            <div className="h-full min-h-[220px] text-center text-gray-400 flex flex-col items-center justify-center animate-slide-up-fade relative overflow-hidden rounded-2xl w-full p-6">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-pink-400 rounded-full blur-3xl opacity-5 pointer-events-none animate-breathe"></div>
               
-              <div className="w-16 h-16 bg-pink-50/80 border border-pink-100 rounded-2xl flex items-center justify-center mb-3 text-2xl relative z-10 shadow-sm">
-                🌸
+              <div className="w-14 h-14 bg-pink-50/80 border border-pink-100/90 rounded-2xl flex items-center justify-center mb-3 text-pink-500 relative z-10 shadow-xs">
+                <Sparkles size={24} />
               </div>
-              <h4 className="text-base font-medium text-gray-700 mb-1 relative z-10">Clear mind, calm day</h4>
+              <h4 className="text-base font-semibold text-gray-800 mb-1 relative z-10">Clear mind, calm day</h4>
               <p className="text-xs text-gray-400 mb-4 max-w-xs relative z-10">No tasks scheduled for today. Take a mindful break or add your first goal.</p>
               <button 
                 type="button"
                 onClick={() => setIsAdding(true)}
-                className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-500 rounded-xl font-medium text-xs transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none flex items-center gap-1.5 relative z-10 hover:scale-105 active:scale-95 cursor-pointer"
+                className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-xl font-medium text-xs transition-all shadow-xs focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none flex items-center gap-1.5 relative z-10 hover:scale-105 active:scale-95 cursor-pointer"
                 title="Add a new task (Press 'N')"
               >
                 <Plus size={16} />
@@ -1192,17 +1194,18 @@ function DailyTaskListComponent({
         )}
       </div>
 
-      <div className="pt-2 md:pt-3 border-t border-pink-50 mt-auto shrink-0">
-        {!isAdding ? (
-          <button 
-            type="button"
-            onClick={() => setIsAdding(true)}
-            className="w-full py-2.5 md:py-3 flex items-center justify-center gap-2 text-pink-400 font-medium hover:bg-pink-50 rounded-2xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none cursor-pointer"
-          >
-            <Plus size={18} />
-            Add a new task
-          </button>
-        ) : (
+      {(isAdding || tasks.length > 0) && (
+        <div className="pt-2 md:pt-3 border-t border-pink-50 mt-auto shrink-0">
+          {!isAdding ? (
+            <button 
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="w-full py-2.5 md:py-3 flex items-center justify-center gap-2 text-pink-400 font-medium hover:bg-pink-50 rounded-2xl transition-colors focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none cursor-pointer"
+            >
+              <Plus size={18} />
+              Add a new task
+            </button>
+          ) : (
           <form onSubmit={handleAddTask} className="flex flex-col gap-2.5 bg-white/80 backdrop-blur-md p-3 md:p-3.5 rounded-2xl border border-pink-200/90 shadow-sm animate-slide-up-fade">
             <input
               type="text"
@@ -1498,6 +1501,7 @@ function DailyTaskListComponent({
           </form>
         )}
       </div>
+      )}
 
       {/* Delete Recurring Task Modal */}
       {taskToDelete && (

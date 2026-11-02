@@ -107,13 +107,13 @@ export function ZenTriageModal({
             <Inbox size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
               <span>Inbox & Triage</span>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100/70 text-amber-800">
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100/70 text-amber-800 border border-amber-200/60">
                 {inboxTasks.length} Pending
               </span>
             </h2>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-400 mt-0.5">
               Mindful Inbox: Capture unscheduled thoughts now, process them with clarity later.
             </p>
           </div>

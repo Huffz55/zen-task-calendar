@@ -42,7 +42,7 @@ export function FocusAnalyticsCard({
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 bg-pink-50 text-pink-600 rounded-full text-xs font-semibold border border-pink-100">
           <Sparkles size={13} />
-          <span>{totalSessionsCount} Sessions 🧘</span>
+          <span>{totalSessionsCount} Sessions</span>
         </div>
       </div>
 

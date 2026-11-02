@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CustomList } from '../types';
-import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
-import { playSoftPop } from '../utils/audio';
+import { Plus, Trash2, CheckCircle2, Circle, ListChecks, ArrowLeft, CornerDownLeft, Sparkles } from 'lucide-react';
+import { playSoftPop, playBambooTap, playWaterDrop } from '../utils/audio';
 import { hapticLight, hapticSuccess, hapticWarning } from '../utils/haptics';
 
 interface CustomListsProps {
@@ -13,26 +13,51 @@ interface CustomListsProps {
   onToggleListItem: (listId: string, itemId: string) => void;
 }
 
-function CustomListsComponent({ lists, onAddList, onDeleteList, onAddListItem, onDeleteListItem, onToggleListItem }: CustomListsProps) {
+function CustomListsComponent({
+  lists,
+  onAddList,
+  onDeleteList,
+  onAddListItem,
+  onDeleteListItem,
+  onToggleListItem,
+}: CustomListsProps) {
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
-  const [newItemTexts, setNewItemTexts] = useState<Record<string, string>>({});
+  const [newItemText, setNewItemText] = useState('');
+
+  // Keep a valid active list selected
+  useEffect(() => {
+    if (lists.length > 0) {
+      if (!selectedListId || !lists.some(l => l.id === selectedListId)) {
+        setSelectedListId(lists[0].id);
+      }
+    } else {
+      setSelectedListId(null);
+    }
+  }, [lists, selectedListId]);
+
+  const activeList = lists.find(l => l.id === selectedListId) || lists[0];
 
   const handleAddList = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newListTitle.trim()) {
-      onAddList(newListTitle.trim());
+    const title = newListTitle.trim();
+    if (title) {
+      onAddList(title);
+      playWaterDrop();
       hapticLight();
       setNewListTitle('');
     }
   };
 
-  const handleAddItem = (e: React.FormEvent, listId: string) => {
+  const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
-    const text = newItemTexts[listId];
-    if (text?.trim()) {
-      onAddListItem(listId, text.trim());
+    if (!activeList) return;
+    const text = newItemText.trim();
+    if (text) {
+      onAddListItem(activeList.id, text);
+      playBambooTap();
       hapticLight();
-      setNewItemTexts(prev => ({ ...prev, [listId]: '' }));
+      setNewItemText('');
     }
   };
 
@@ -46,107 +71,246 @@ function CustomListsComponent({ lists, onAddList, onDeleteList, onAddListItem, o
     onToggleListItem(listId, itemId);
   };
 
-  return (
-    <div className="bg-white p-5 md:p-6 rounded-3xl border border-pink-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-auto lg:h-full flex flex-col overflow-visible lg:overflow-hidden animate-slide-up-fade relative">
-      <div className="mb-4 md:mb-6">
-        <h3 className="text-xl md:text-2xl font-semibold text-gray-800 mb-4">My Checklists</h3>
-        <form onSubmit={handleAddList} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+  const handleDeleteList = (id: string) => {
+    hapticWarning();
+    onDeleteList(id);
+    if (selectedListId === id) {
+      const remaining = lists.filter(l => l.id !== id);
+      setSelectedListId(remaining.length > 0 ? remaining[0].id : null);
+    }
+  };
+
+  // If no lists exist at all, render an inviting Zen empty state
+  if (lists.length === 0) {
+    return (
+      <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-pink-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col items-center justify-center p-6 sm:p-12 animate-slide-up-fade relative overflow-hidden">
+        <div className="w-16 h-16 rounded-3xl bg-pink-50 border border-pink-100 flex items-center justify-center text-pink-500 mb-4 shadow-xs">
+          <ListChecks size={30} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-1">Checklists & Routines</h3>
+        <p className="text-sm text-gray-400 text-center max-w-sm mb-6 leading-relaxed">
+          Keep reusable routines, groceries, or project checklists distinct from your daily calendar flow.
+        </p>
+
+        <form onSubmit={handleAddList} className="w-full max-w-md flex items-center gap-2 bg-pink-50/40 p-1.5 rounded-2xl border border-pink-100 focus-within:border-pink-300 focus-within:ring-2 focus-within:ring-pink-200 transition-all shadow-xs">
           <input
             type="text"
             value={newListTitle}
             onChange={(e) => setNewListTitle(e.target.value)}
-            placeholder="Create a new list..."
-            maxLength={80}
-            className="flex-1 min-w-0 bg-pink-50/30 border border-pink-100 px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 rounded-xl text-gray-700 placeholder-gray-400"
+            placeholder="e.g. Morning Routine, Packing Checklist..."
+            maxLength={60}
+            className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-800 placeholder-gray-400 outline-none"
           />
-          <button 
+          <button
             type="submit"
             disabled={!newListTitle.trim()}
-            className="px-4 py-2 bg-pink-200 hover:bg-pink-300 disabled:opacity-50 disabled:hover:bg-pink-200 text-gray-800 rounded-xl transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none"
+            className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
           >
-            Create
+            <Plus size={14} />
+            <span>Create List</span>
           </button>
         </form>
       </div>
+    );
+  }
 
-      <div className="flex-1 overflow-visible lg:overflow-y-auto min-h-0 pr-0 md:pr-2 space-y-4 pb-10 md:pb-0">
-        {lists.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-gray-400 py-10">
-            <p>No lists yet. Create one above!</p>
+  // Active list calculations
+  const totalItems = activeList?.items.length || 0;
+  const completedItems = activeList?.items.filter(i => i.completed).length || 0;
+  const percentDone = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+  return (
+    <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-pink-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col md:flex-row overflow-hidden animate-slide-up-fade relative">
+      
+      {/* ── Left Sidebar: Lists Overview (Hidden on mobile if viewing details) ── */}
+      <div className={`w-full md:w-72 lg:w-80 border-b md:border-b-0 md:border-r border-pink-100/70 p-4 md:p-5 flex flex-col shrink-0 bg-pink-50/20 ${selectedListId ? 'hidden md:flex' : 'flex'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-800">Checklists</h3>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-pink-100 text-pink-700">
+              {lists.length}
+            </span>
           </div>
-        ) : (
-          lists.map(list => (
-            <div key={list.id} className="border border-pink-50 rounded-2xl p-4 md:p-5 hover:border-pink-100 transition-colors animate-slide-up-fade">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-lg font-medium text-gray-800">{list.title}</h4>
-                <button 
-                  onClick={() => {
-                    hapticWarning();
-                    onDeleteList(list.id);
-                  }}
-                  className="p-1.5 text-pink-200 hover:text-pink-400 transition-colors rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                  title="Delete list"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+        </div>
 
-              <ul className="space-y-1 mb-3">
-                {list.items.map(item => (
-                  <li key={item.id} className="group flex items-center justify-between p-2 py-3 md:py-2 rounded-xl hover:bg-pink-50/50 transition-colors">
-                    <div className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer min-h-[44px]" onClick={() => handleToggle(list.id, item.id, item.completed)}>
-                      <button 
-                        className={`transition-all duration-300 ease-out flex items-center justify-center shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:outline-none min-w-[44px] min-h-[44px] hover:scale-105 active:scale-90
-                        ${item.completed 
-                          ? 'text-pink-400 scale-110 drop-shadow-[0_0_6px_rgba(249,168,212,0.4)]' 
-                          : 'text-gray-300 group-hover:text-pink-200'
-                        }`}
-                      >
-                        {item.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                      </button>
-                      <span className={`text-[15px] truncate transition-all duration-300 py-2 ${item.completed ? 'text-gray-400 line-through opacity-70' : 'text-gray-700'}`}>
-                        {item.text}
-                      </span>
-                    </div>
-                    <button 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        hapticWarning();
-                        onDeleteListItem(list.id, item.id); 
-                      }}
-                      className="opacity-100 md:opacity-0 group-hover:opacity-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-pink-200 hover:text-pink-400 transition-opacity rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                      title="Delete item"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+        {/* Quick Add List Form in Sidebar */}
+        <form onSubmit={handleAddList} className="flex items-center gap-1.5 mb-3">
+          <input
+            type="text"
+            value={newListTitle}
+            onChange={(e) => setNewListTitle(e.target.value)}
+            placeholder="+ New checklist..."
+            maxLength={60}
+            className="flex-1 bg-white border border-pink-100 px-3 py-1.5 text-xs rounded-xl text-gray-700 placeholder-gray-400 outline-none focus:border-pink-300 focus:ring-1 focus:ring-pink-200 transition-all shadow-2xs"
+          />
+          <button
+            type="submit"
+            disabled={!newListTitle.trim()}
+            className="p-1.5 bg-pink-100 hover:bg-pink-200 disabled:opacity-40 text-pink-600 rounded-xl transition-colors cursor-pointer"
+            title="Create list"
+          >
+            <Plus size={16} />
+          </button>
+        </form>
 
-              <form onSubmit={(e) => handleAddItem(e, list.id)} className="flex items-center gap-2 mt-2">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={newItemTexts[list.id] || ''}
-                    onChange={(e) => setNewItemTexts(prev => ({ ...prev, [list.id]: e.target.value }))}
-                    placeholder="Add an item..."
-                    maxLength={250}
-                    className="w-full bg-transparent border-b border-transparent focus:border-pink-200 px-2 py-1.5 focus-visible:outline-none text-gray-600 text-sm placeholder-gray-300 transition-colors"
-                  />
+        {/* List items navigation */}
+        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
+          {lists.map(list => {
+            const isSelected = list.id === activeList?.id;
+            const done = list.items.filter(i => i.completed).length;
+            const total = list.items.length;
+
+            return (
+              <div
+                key={list.id}
+                onClick={() => setSelectedListId(list.id)}
+                className={`group flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all ${
+                  isSelected
+                    ? 'bg-white text-pink-700 font-semibold shadow-xs border border-pink-200/80'
+                    : 'text-gray-600 hover:bg-white/60 border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-pink-500' : 'bg-gray-300'}`} />
+                  <span className="text-xs truncate">{list.title}</span>
                 </div>
-                <button 
-                  type="submit"
-                  disabled={!newItemTexts[list.id]?.trim()}
-                  className="p-1.5 text-pink-300 hover:text-pink-400 disabled:opacity-50 hover:bg-pink-50 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200"
-                  title="Add item"
-                >
-                  <Plus size={18} />
-                </button>
-              </form>
-            </div>
-          ))
-        )}
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] text-gray-400 font-medium">
+                    {total > 0 ? `${done}/${total}` : '0'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteList(list.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-500 rounded-lg transition-opacity"
+                    title="Delete list"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* ── Right Panel: Active Checklist Detail ── */}
+      {activeList ? (
+        <div className="flex-1 flex flex-col min-w-0 p-4 md:p-6 h-full overflow-hidden">
+          {/* Active List Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-pink-100/70 mb-4 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {/* Mobile Back Button */}
+              <button
+                type="button"
+                onClick={() => setSelectedListId(null)}
+                className="md:hidden p-1.5 text-gray-500 hover:text-gray-800 rounded-xl hover:bg-pink-50"
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div>
+                <h4 className="text-lg md:text-xl font-bold text-gray-800 truncate">{activeList.title}</h4>
+                <p className="text-xs text-gray-400">
+                  {totalItems > 0 ? `${completedItems} of ${totalItems} items completed (${percentDone}%)` : 'No items yet'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleDeleteList(activeList.id)}
+              className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Delete this checklist"
+            >
+              <Trash2 size={14} />
+              <span className="hidden sm:inline">Delete List</span>
+            </button>
+          </div>
+
+          {/* Quick Add Item Input */}
+          <form onSubmit={handleAddItem} className="mb-4 shrink-0">
+            <div className="flex items-center gap-2 bg-pink-50/40 border border-pink-100/90 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-pink-200 focus-within:border-pink-300 transition-all shadow-2xs">
+              <input
+                type="text"
+                value={newItemText}
+                onChange={(e) => setNewItemText(e.target.value)}
+                placeholder={`Add item to ${activeList.title}...`}
+                maxLength={250}
+                className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-transparent outline-none text-gray-800 placeholder-gray-400"
+              />
+              <button
+                type="submit"
+                disabled={!newItemText.trim()}
+                className="px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>Add</span>
+                <CornerDownLeft size={13} />
+              </button>
+            </div>
+          </form>
+
+          {/* Checklist Items Container */}
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 scrollbar-none">
+            {activeList.items.length === 0 ? (
+              <div className="h-48 flex flex-col items-center justify-center text-center text-gray-400">
+                <span className="text-2xl mb-1.5">📝</span>
+                <p className="text-xs font-medium">List is empty</p>
+                <p className="text-[11px] text-gray-400">Type an item above and press Add</p>
+              </div>
+            ) : (
+              activeList.items.map(item => (
+                <div
+                  key={item.id}
+                  className="group flex items-center justify-between p-2.5 rounded-2xl bg-white/70 hover:bg-white border border-pink-50/80 hover:border-pink-100 transition-all shadow-2xs"
+                >
+                  <div
+                    className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer min-h-[36px]"
+                    onClick={() => handleToggle(activeList.id, item.id, item.completed)}
+                  >
+                    <button
+                      type="button"
+                      className={`transition-all duration-200 flex items-center justify-center shrink-0 rounded-full ${
+                        item.completed
+                          ? 'text-pink-500 scale-105'
+                          : 'text-gray-300 group-hover:text-pink-300'
+                      }`}
+                    >
+                      {item.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                    </button>
+                    <span
+                      className={`text-xs sm:text-sm truncate transition-all ${
+                        item.completed ? 'text-gray-400 line-through opacity-65' : 'text-gray-700 font-medium'
+                      }`}
+                    >
+                      {item.text}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticWarning();
+                      onDeleteListItem(activeList.id, item.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-300 hover:text-rose-500 rounded-lg transition-opacity cursor-pointer shrink-0"
+                    title="Delete item"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-xs">
+          Select a list to view its items
+        </div>
+      )}
+
     </div>
   );
 }

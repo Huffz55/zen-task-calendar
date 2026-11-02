@@ -122,14 +122,40 @@
   border-color: #342e46 !important;
 }
 
-/* ── Gray button/dialog backgrounds (delete modal options) ── */
+/* ── Gray button/dialog backgrounds (delete modal options, tiles, charts) ── */
 [data-theme="midnight"] .bg-gray-50 {
   background-color: #1e1b2a !important;
   color: #f3f4f6;
 }
 
+[data-theme="midnight"] .bg-gray-100 {
+  background-color: #272336 !important;
+  color: #f3f4f6;
+}
+
+[data-theme="midnight"] .bg-gray-200 {
+  background-color: #342e46 !important;
+}
+
+[data-theme="midnight"] .bg-gray-300 {
+  background-color: #433c5b !important;
+}
+
+[data-theme="midnight"] .border-gray-100 {
+  border-color: #2e283e !important;
+}
+
+[data-theme="midnight"] .border-gray-200,
+[data-theme="midnight"] .border-gray-200\/80 {
+  border-color: #342e46 !important;
+}
+
 [data-theme="midnight"] .hover\:bg-gray-100:hover {
   background-color: #272336 !important;
+}
+
+[data-theme="midnight"] .hover\:bg-gray-200\/80:hover {
+  background-color: #3d3556 !important;
 }
 
 /* ── Pink tinted backgrounds (delete all, selected states) ── */
@@ -159,25 +185,26 @@
 }
 
 /* ── Text color overrides for readability ── */
+[data-theme="midnight"] .text-gray-900,
 [data-theme="midnight"] .text-gray-800,
 [data-theme="midnight"] .text-gray-700 {
-  color: #f3f4f6 !important;
+  color: #f8fafc !important;
 }
 
 [data-theme="midnight"] .text-gray-600 {
-  color: #d1d5db !important;
+  color: #e2e8f0 !important;
 }
 
 [data-theme="midnight"] .text-gray-500 {
-  color: #9ca3af !important;
+  color: #cbd5e1 !important;
 }
 
 [data-theme="midnight"] .text-gray-400 {
-  color: #8b879a !important;
+  color: #94a3b8 !important;
 }
 
 [data-theme="midnight"] .text-gray-300 {
-  color: #555066 !important;
+  color: #64748b !important;
 }
 
 [data-theme="midnight"] .text-pink-800 {
@@ -272,10 +299,10 @@
   }
 }
 
-/* Custom scrollbar for a cleaner look */
+/* Custom scrollbar for a cleaner, subtle look */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -283,9 +310,19 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-pink-100 rounded-full;
+  background-color: rgba(244, 114, 182, 0.22);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-pink-200;
+  background-color: rgba(244, 114, 182, 0.45);
+}
+
+[data-theme="midnight"] ::-webkit-scrollbar-thumb {
+  background-color: rgba(173, 148, 236, 0.16) !important;
+}
+
+[data-theme="midnight"] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(173, 148, 236, 0.38) !important;
 }

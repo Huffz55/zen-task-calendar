@@ -40,7 +40,7 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
         <button onClick={prevMonth} className="p-1.5 hover:bg-pink-50 rounded-full transition-colors text-pink-300">
           <ChevronLeft size={20} />
         </button>
-        <h2 className="text-lg font-medium text-gray-700">
+        <h2 className="text-base md:text-lg font-semibold text-gray-800">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
         <button onClick={nextMonth} className="p-1.5 hover:bg-pink-50 rounded-full transition-colors text-pink-300">
@@ -56,7 +56,7 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
     
     for (let i = 0; i < 7; i++) {
       days.push(
-        <div key={i} className="text-center font-medium text-xs text-gray-400 py-1 mb-1">
+        <div key={i} className="text-center font-semibold text-[11px] uppercase tracking-wider text-gray-400/90 py-1 mb-1">
           {format(addDays(startDate, i), 'EEE')}
         </div>
       );
@@ -106,9 +106,9 @@ function CalendarComponent({ selectedDate, onSelectDate, getTaskCountForDate, on
             className={`
               relative flex flex-col items-center justify-center p-1 md:p-1.5 min-h-[40px] md:min-h-[48px] text-sm cursor-pointer
               border transition-all duration-200 rounded-2xl flex-1 shrink-0
-              ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600'}
-              ${isSelected ? 'bg-pink-100 text-pink-700 font-medium shadow-sm border-transparent' : 'hover:bg-pink-50 border-transparent'}
-              ${isTodayDate && !isSelected ? 'border-pink-100 text-pink-500' : ''}
+              ${!isCurrentMonth ? 'text-gray-400/50 opacity-35 select-none hover:opacity-75' : 'text-gray-700 font-medium'}
+              ${isSelected ? 'bg-pink-100 text-pink-700 font-bold shadow-sm ring-2 ring-pink-400/60 border-pink-300/50' : 'hover:bg-pink-50 border-transparent'}
+              ${isTodayDate && !isSelected ? 'border-pink-300/60 text-pink-500 font-semibold' : ''}
               ${isHovered ? '!bg-pink-50/80 !border-pink-200 scale-105 z-10' : ''}
             `}
           >

@@ -8,7 +8,7 @@ import { format, subDays } from 'date-fns';
 import type { Task } from './types';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle, Minimize2, Check, ChevronDown, BarChart2 } from 'lucide-react';
+import { Download, Upload, CheckCircle2, AlertCircle, X, RotateCcw, Cloud, Play, Pause, Moon, Wind, Award, HelpCircle, Minimize2, Check, ChevronDown, BarChart2, Sparkles } from 'lucide-react';
 import { initAudioContext, playSingingBowl, playWaterDrop } from './utils/audio';
 import { hapticWarning, hapticSuccess } from './utils/haptics';
 import { ThemeSelector, type AppTheme } from './components/ThemeSelector';
@@ -489,10 +489,10 @@ function App() {
   };
 
   const getGreeting = () => {
-    if (currentHour >= 5 && currentHour < 12) return "A calm morning ahead. 🌸";
-    if (currentHour >= 12 && currentHour < 18) return "A focused afternoon. 🌸";
-    if (currentHour >= 18 && currentHour < 22) return "Wind down and reflect. 🌙";
-    return "Time to rest. 🌙";
+    if (currentHour >= 5 && currentHour < 12) return "A calm morning ahead.";
+    if (currentHour >= 12 && currentHour < 18) return "A focused afternoon.";
+    if (currentHour >= 18 && currentHour < 22) return "Wind down and reflect.";
+    return "Time to rest peacefully.";
   };
 
   const isNight = currentHour >= 20 || currentHour < 7;
@@ -905,21 +905,31 @@ function App() {
               {/* Status Indicator Badge */}
               <div className="flex items-center gap-2 px-3.5 py-1 bg-pink-50 rounded-full border border-pink-100 mb-4 shadow-2xs">
                 <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-500 animate-pulse' : 'bg-pink-400'}`} />
-                <span className="text-xs font-semibold text-pink-600">
-                  {isTimerRunning ? 'Deep Focus Active 🧘' : 'Ready to Focus 🌸'}
+                <span className="text-xs font-semibold text-pink-600 flex items-center gap-1.5">
+                  {isTimerRunning ? (
+                    <>
+                      <Sparkles size={13} className="text-pink-500 animate-spin" />
+                      <span>Deep Focus Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={13} className="text-pink-400" />
+                      <span>Ready to Focus</span>
+                    </>
+                  )}
                 </span>
               </div>
 
               {/* Digits - ALWAYS VISIBLE EXACT TIME */}
               <div className="flex flex-col items-center my-1 select-none">
-                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800">
+                <div className="text-6xl md:text-7xl font-mono font-bold tracking-widest text-gray-800 tabular-nums">
                   {Math.floor((timeLeft || 0) / 60).toString().padStart(2, '0')}:{(timeLeft || 0) % 60 === 0 ? '00' : ((timeLeft || 0) % 60).toString().padStart(2, '0')}
                 </div>
 
                 {/* Subtitle / Focus message */}
                 <p className="text-xs text-gray-400 mt-2 font-medium max-w-sm text-center">
                   {isTimerRunning
-                    ? (activeFocusTask ? `Target: ${activeFocusTask.title}` : 'Stay gently in the present moment 🌸')
+                    ? (activeFocusTask ? `Target: ${activeFocusTask.title}` : 'Stay gently in the present moment')
                     : 'Choose your flow and press start'}
                 </p>
               </div>
@@ -977,7 +987,7 @@ function App() {
                     }
                     toggleTimer();
                   }}
-                  className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-pink-500/20 cursor-pointer hover:scale-105"
+                  className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 hover:from-pink-600 hover:to-rose-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-pink-500/25 hover:shadow-lg hover:shadow-pink-500/35 cursor-pointer hover:scale-105"
                   title={isTimerRunning ? 'Pause (Space)' : 'Start (Space)'}
                 >
                   {isTimerRunning ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
